@@ -7,16 +7,16 @@ from config import db, bcrypt
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
-    serialize_rules = ('-orders.user', '-reservations.user', '-_password_hash')
+    serialize_rules = ('-orders.user', '-reservations.user', '-outlets.user', '-_password_hash')
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     _password_hash = db.Column(db.String(128), nullable=False)
     phone_no = db.Column(db.Integer)
-    role = db.Column(db.String(20), nullable=False) # 'admin' or 'customer'
+    role = db.Column(db.String(20), nullable=False) # 'outlet owner' or 'customer'
 
-
+    outlets = db.relationship('Outlet', back_populates='owner', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
     reservations = db.relationship('Reservation', back_populates='user', cascade='all, delete-orphan')
 
@@ -65,13 +65,15 @@ class Cuisine(db.Model, SerializerMixin):
 
 class Outlet(db.Model, SerializerMixin):
     __tablename__ = 'outlets'
-    serialize_rules = ('-cuisine.outlets', '-menu_items.outlet',)
+    serialize_rules = ('-cuisine.outlets', '-menu_items.outlet', '-owner.outlets')
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     contact = db.Column(db.String)
     cuisine_id = db.Column(db.Integer, db.ForeignKey('cuisines.id'))
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
+    owner = db.relationship('User', back_populates='outlets')
     cuisine = db.relationship('Cuisine', back_populates='outlets')
     menu_items = db.relationship('MenuItem', back_populates='outlet', cascade='all, delete-orphan')
     

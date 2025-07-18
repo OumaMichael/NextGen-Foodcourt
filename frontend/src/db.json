@@ -1,0 +1,103 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+1234567890",
+      "password": "password123",
+      "role": "customer",
+      "createdAt": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "phone": "+1234567891",
+      "password": "password123",
+      "role": "customer",
+      "createdAt": "2024-01-16T14:20:00Z"
+    },
+    {
+      "id": 3,
+      "name": "Admin User",
+      "email": "admin@foodcourt.com",
+      "phone": "+1234567892",
+      "password": "admin123",
+      "role": "admin",
+      "createdAt": "2024-01-10T09:00:00Z"
+    }
+  ],
+  "cuisines": [
+    { "id": 1, "name": "Ethiopian", "image": "/public/images/cuisine-ethiopian.png" },
+    { "id": 2, "name": "Congolese", "image": "/public/images/cuisine-congolese.png" },
+    { "id": 3, "name": "Kenyan", "image": "/public/images/cuisine-kenyan.png" },
+    { "id": 4, "name": "Nigerian", "image": "/public/images/cuisine-nigerian.png" }
+  ],
+  "outlets": [
+    { "id": 1, "name": "Mama Africa" },
+    { "id": 2, "name": "Spice Garden" },
+    { "id": 3, "name": "Safari Kitchen" },
+    { "id": 4, "name": "Heritage" }
+  ],
+  "dishes": [
+    {
+      "id": 1,
+      "name": "Injera with Doro Wat",
+      "outlet": "Mama Africa Ethiopian",
+      "price": 15.99,
+      "image": "/placeholder.svg?height=300&width=300&text=Injera"
+    },
+    {
+      "id": 2,
+      "name": "Tibs",
+      "outlet": "Mama Africa Ethiopian",
+      "price": 12.99,
+      "image": "/placeholder.svg?height=300&width=300&text=Tibs"
+    },
+    {
+      "id": 3,
+      "name": "Kitfo",
+      "outlet": "Mama Africa Ethiopian",
+      "price": 18.99,
+      "image": "/placeholder.svg?height=300&width=300&text=Kitfo"
+    },
+    {
+      "id": 4,
+      "name": "Poulet à la Moambé",
+      "outlet": "Congo Delights",
+      "price": 16.99,
+      "image": "/placeholder.svg?height=300&width=300&text=Moambe"
+    },
+    {
+      "id": 5,
+      "name": "Fufu with Ndolé",
+      "outlet": "Congo Delights",
+      "price": 14.99,
+      "image": "/placeholder.svg?height=300&width=300&text=Fufu"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 1,
+      "name": "Sarah M.",
+      "outlet": "Mama Africa Ethiopian",
+      "rating": 5,
+      "comment": "Amazing Ethiopian food! The Doro Wat was absolutely delicious."
+    },
+    {
+      "id": 2,
+      "name": "John D.",
+      "outlet": "Safari Kitchen",
+      "rating": 5,
+      "comment": "Great variety of African cuisines. Fast service and reasonable prices."
+    },
+    {
+      "id": 3,
+      "name": "Maria L.",
+      "outlet": "Jollof Palace",
+      "rating": 5,
+      "comment": "Best Jollof rice I've had outside Nigeria. Highly recommend!"
+    }
+  ]
+}
