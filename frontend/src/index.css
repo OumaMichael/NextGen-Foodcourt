@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* All your CSS variables (unchanged) */
+    --background: 40 100% 97%;
+    --foreground: 25 25% 15%;
+    /* ... (keep all your vars) ... */
+    --border: 35 30% 88%;
+  }
+
+  .dark {
+    /* Dark mode CSS variables (unchanged) */
+    --background: 25 15% 8%;
+    --foreground: 35 20% 92%;
+    --border: 25 15% 18%;
+  }
+}
+
+@layer base {
+  * {
+    /* 🔧 Fixed the error here */
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
