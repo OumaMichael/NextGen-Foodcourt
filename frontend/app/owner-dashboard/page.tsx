@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { restaurants, tables, owners } from '@/lib/data';
 
 export default function OwnerDashboard() {
@@ -36,7 +37,7 @@ export default function OwnerDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Tables Owned</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Tables</h3>
           {/* <p className="text-3xl font-bold text-blue-600">{ownerTables.length}</p> */}
           <p className="text-sm text-gray-500 mt-1">
             {/* {ownerTables.filter(t => t.status === 'available').length} available */}
@@ -53,7 +54,8 @@ export default function OwnerDashboard() {
       <div className="grid lg:grid-cols-2 gap-8">
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Tables</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4"
+          >Tables</h2>
           {/* <div className="grid grid-cols-4 gap-3">
             {ownerTables.map((table) => (
               <div
@@ -125,21 +127,21 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      <div className="mt-8 bg-white rounded-lg shadow-md p-6">
+       <div className="mt-8 bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
         <div className="grid md:grid-cols-4 gap-4">
-          <button className="bg-amber-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-amber-600 transition-colors">
-            Add New Dish
-          </button>
-          <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors">
-            Update Prices
-          </button>
-          <button className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors">
-            View Orders
-          </button>
-          <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors">
+          <Link href="/owner-dashboard/menu" className="bg-orange-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block">
+            Manage Menu
+          </Link>
+          <Link href="/owner-dashboard/order-management" className="bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors text-center block">
+            Order Management
+          </Link>
+          <Link href="/owner-dashboard/analytics" className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors text-center block">
             Analytics
-          </button>
+          </Link>
+          <Link href="/owner-dashboard/reservations" className="bg-purple-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors text-center block">
+            Manage Reservations
+          </Link>
         </div>
       </div>
     </div>

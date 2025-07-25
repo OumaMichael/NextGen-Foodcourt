@@ -108,6 +108,11 @@ export default function Header() {
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
+  
+  const isOwnerDashboardPage = pathname.startsWith('/owner-dashboard');
+  const shouldShowOwnerNav = isOwner && isOwnerDashboardPage;
+  const shouldShowCustomerNav = !isOwnerDashboardPage;
+  
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">

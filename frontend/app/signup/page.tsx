@@ -91,7 +91,7 @@ export default function Signup() {
         />
         <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="text-center text-white">
-            <h1 className="text-4xl font-bold mb-4">FoodCourt Hub</h1>
+            <h1 className="text-4xl font-bold mb-4">NextGen FoodCourt</h1>
             <p className="text-xl">Join our community of food lovers and restaurant owners</p>
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function Signup() {
                   onClick={() => setFormData({ ...formData, userType: 'customer' })}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
                     formData.userType === 'customer' 
-                      ? 'border-amber-500 bg-amber-50 text-amber-700' 
+                      ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
@@ -126,19 +126,18 @@ export default function Signup() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, userType: 'owner' })}
+                  onClick={() => setFormData({ ...formData, userType: 'admin' })}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                    formData.userType === 'owner' 
-                      ? 'border-amber-500 bg-amber-50 text-amber-700' 
+                    formData.userType === 'admin' 
+                      ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
-                  <div className="font-medium">Restaurant Owner</div>
+                  <div className="font-medium">Admin</div>
                   <div className="text-sm text-gray-600">Manage your restaurant</div>
                 </button>
               </div>
             </div>
-
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -163,7 +162,7 @@ export default function Signup() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                placeholder="Veroline@example.com"
+                placeholder="Johndoe@example.com"
                 required
               />
             </div>

@@ -181,18 +181,20 @@ export default function BrowseCuisines() {
           {filteredRestaurants.map((restaurant) => (
             <div
               key={restaurant.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col h-80"
             >
-              <div className="p-6">
+              <div className="p-6 flex flex-col justify-between flex-grow">
+                <div>
                 <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
                   {restaurant.name}
                 </h3>
                 <p className="text-lg text-orange-600 dark:text-orange-400 font-semibold mb-3">
                   {restaurant.cuisine?.name}
                 </p>
-                <p className="text-gray-600 dark:text-gray-300 text-lg mb-6">
+                <p className="text-gray-600 dark:text-gray-300 text-lg mb-6 line-clamp-3">
                   {restaurant.description}
                 </p>
+                </div>
                 <button
                   onClick={() => {
                     setSelectedCuisine(restaurant.cuisine?.name || '');
