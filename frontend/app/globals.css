@@ -68,3 +68,109 @@
     line-height: 1.6;
   }
 }
+
+/* Custom SweetAlert2 Styles */
+.swal-custom-popup {
+  border-radius: 20px !important;
+  padding: 2rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  border: 2px solid #fb923c !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fef3e2 100%) !important;
+}
+
+.swal-custom-title {
+  font-size: 2rem !important;
+  font-weight: 800 !important;
+  color: #1f2937 !important;
+  margin-bottom: 1.5rem !important;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+.swal-custom-button {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 14px 32px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: white !important;
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.3) !important;
+  transition: all 0.3s ease !important;
+  text-transform: none !important;
+  min-width: 140px !important;
+}
+
+.swal-custom-button:hover {
+  background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 35px rgba(249, 115, 22, 0.4) !important;
+}
+
+.swal-custom-button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3) !important;
+}
+
+.swal-custom-button:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important;
+}
+
+/* SweetAlert2 Animation Enhancement */
+.swal2-popup.swal2-show {
+  animation: swal2-show 0.4s ease-out !important;
+}
+
+.swal2-popup.swal2-hide {
+  animation: swal2-hide 0.3s ease-in !important;
+}
+
+@keyframes swal2-show {
+  0% {
+    transform: scale(0.7) translateY(30px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) translateY(-10px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes swal2-hide {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* Success icon enhancement */
+.swal2-success-circular-line-left,
+.swal2-success-circular-line-right {
+  background-color: #f97316 !important;
+}
+
+.swal2-success-fix {
+  background-color: #f97316 !important;
+}
+
+.swal2-success-line-tip,
+.swal2-success-line-long {
+  background-color: #f97316 !important;
+}
+
+/* Backdrop enhancement */
+.swal2-backdrop-show {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+}

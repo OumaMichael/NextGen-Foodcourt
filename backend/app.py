@@ -550,9 +550,15 @@ class ReservationDetails(Resource):
             return {"error": str(e)}, 500
 
 
+<<<<<<< HEAD
     @jwt_required()
     def delete(self, reservation_id):
         reservation = Reservation.query.get(reservation_id)
+=======
+        
+    def delete(self, id):
+        reservation = Reservation.query.get(id)
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
         if not reservation:
             return {"error": "Reservation not found"}, 404
 
@@ -563,7 +569,7 @@ class ReservationDetails(Resource):
 
             db.session.delete(reservation)
             db.session.commit()
-            return {"message": "Reservation deleted"}, 200
+            return {"message": "Reservation deleted successfully"}, 200
 
         except Exception as e:
             db.session.rollback()

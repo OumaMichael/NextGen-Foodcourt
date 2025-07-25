@@ -57,6 +57,7 @@ export default function Order() {
         const outletsData = await outletsRes.json();
         const menuData = await menuRes.json();
 
+<<<<<<< HEAD
         setRestaurants(outletsData);
         setMenuItems(menuData);
       } catch (error) {
@@ -64,6 +65,8 @@ export default function Order() {
         toast.error('Failed to load restaurants and menu items');
       }
     };
+=======
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
 
     fetchData();
   }, []);

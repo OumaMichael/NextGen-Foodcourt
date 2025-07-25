@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+<<<<<<< HEAD
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+=======
+import Swal from 'sweetalert2';
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
 
 interface Table {
   id: number;
@@ -13,6 +17,7 @@ interface Table {
 }
 
 interface Reservation {
+<<<<<<< HEAD
   id: number;
   table_id: number;
   user_id: number;
@@ -25,6 +30,16 @@ interface Reservation {
     table_number: number;
     capacity: number;
   };
+=======
+  id: string;
+  user_id: string;
+  table_id: string;
+  booking_date: string;
+  booking_time: string;
+  no_of_people: number;
+  status: 'confirmed' | 'pending' | 'cancelled';
+  created_at: string;
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
 }
 
 interface User {
@@ -37,16 +52,32 @@ export default function Reservations() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
 
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [reservationDate, setReservationDate] = useState('');
   const [reservationTime, setReservationTime] = useState('');
   const [guestCount, setGuestCount] = useState(1);
+=======
+  const [tables, setTables] = useState<Table[]>([]);
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [showReservations, setShowReservations] = useState(false);
 
+<<<<<<< HEAD
   // Check if user is authenticated
+=======
+  const [formData, setFormData] = useState<FormData>({
+    customerName: '',
+    selectedTable: '',
+    date: '',
+    time: '',
+    guestCount: 1
+  });
+
+
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -73,6 +104,10 @@ export default function Reservations() {
 
         const userData = JSON.parse(storedUser);
         setUser(userData);
+<<<<<<< HEAD
+=======
+        setFormData(prev => ({ ...prev, customerName: userData.name || userData.email }));
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('access_token');
@@ -86,13 +121,17 @@ export default function Reservations() {
     checkAuth();
   }, [router]);
 
+<<<<<<< HEAD
   // Fetch tables and reservations
+=======
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('access_token');
+<<<<<<< HEAD
         const headers = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -113,6 +152,40 @@ export default function Reservations() {
       } catch (error) {
         console.error("Failed to fetch data:", error);
         toast.error('Failed to fetch data');
+=======
+        
+        // Fetch tables
+        const tablesRes = await fetch('http://localhost:5555/tables');
+        const tablesData = await tablesRes.json();
+        setTables(tablesData);
+
+        // Fetch existing reservations
+        const reservationsRes = await fetch('http://localhost:5555/reservations', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const reservationsData = await reservationsRes.json();
+        
+        // Filter reservations for current user (cancelled ones are deleted from DB, but filter for safety)
+        const userReservations = reservationsData.filter((res: Reservation) => 
+          res.user_id === user.id && res.status !== 'cancelled'
+        );
+        
+        setReservations(userReservations);
+        
+        // Update reserved tables list
+        const reservedTableIds = userReservations.map((res: Reservation) => res.table_id);
+        setReservedTables(reservedTableIds);
+        
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to fetch data'
+        });
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
       }
     };
 
@@ -120,15 +193,26 @@ export default function Reservations() {
   }, [user]);
 
   if (loading) {
+<<<<<<< HEAD
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
       </div>
     );
   }
+=======
+  return (
+    <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
+    <div className="w-12 h-12 border-4 border-yellow-500 border-solid rounded-full border-t-transparent animate-spin"></div>
+    <p className="text-yellow-600 text-lg">Loading...</p>
+  </div>
+  );
+}
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
 
   const availableTables = tables.filter(table => table.is_available === 'Yes');
 
+<<<<<<< HEAD
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -137,11 +221,72 @@ export default function Reservations() {
       return;
     }
 
+=======
+  const availableTables = tables.filter(table => 
+     table.is_available === 'Yes' && !reservedTables.includes(table.id)
+  );
+
+  const handleInputChange = (field: keyof FormData, value: string | number) => {
+    let processedValue = value;
+    
+    // Handle guestCount specifically to avoid NaN
+    if (field === 'guestCount') {
+      const numValue = typeof value === 'string' ? parseInt(value) : value;
+      processedValue = isNaN(numValue) ? 1 : numValue;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      [field]: processedValue
+    }));
+  };
+
+
+  const handleReservation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.selectedTable || !formData.date || !formData.time || !formData.customerName) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Please fill in all required fields!'
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Authentication Error',
+        text: 'User information not found. Please log in again.'
+      });
+      router.push('/login');
+      return;
+    }
+
+    const selectedTableInfo = tables.find(t => t.id === formData.selectedTable);
+    
+    // Convert time from HH:MM to HH:MM:SS format for backend
+    const timeWithSeconds = formData.time.includes(':') && formData.time.split(':').length === 2 
+      ? `${formData.time}:00` 
+      : formData.time;
+    
+    const reservationData = {
+      user_id: user.id,
+      table_id: formData.selectedTable,
+      booking_date: formData.date,
+      booking_time: timeWithSeconds,
+      no_of_people: formData.guestCount,
+      status: 'confirmed'
+    };
+
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch('http://localhost:5555/reservations', {
         method: 'POST',
         headers: {
+<<<<<<< HEAD
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
@@ -173,6 +318,270 @@ export default function Reservations() {
     } catch (error) {
       console.error('Reservation error:', error);
       toast.error('Failed to create reservation');
+=======
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(reservationData)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to create reservation');
+      }
+
+      // Update local state with the new reservation
+      setReservations([...reservations, responseData]);
+      setReservedTables([...reservedTables, formData.selectedTable]);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Reservation Confirmed!',
+        html: `
+          <div style="
+            background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+            border: 2px solid #fb923c;
+            box-shadow: 0 8px 25px rgba(251, 146, 60, 0.15);
+          ">
+            <div style="
+              display: grid;
+              gap: 16px;
+              text-align: left;
+            ">
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.7);
+                border-radius: 12px;
+                border-left: 4px solid #f97316;
+              ">
+                <div style="
+                  width: 32px;
+                  height: 32px;
+                  background: #f97316;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-weight: bold;
+                  font-size: 14px;
+                ">🪑</div>
+                <div>
+                  <div style="font-size: 14px; color: #9ca3af; font-weight: 500;">Table Number</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${selectedTableInfo?.table_number}</div>
+                </div>
+              </div>
+              
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.7);
+                border-radius: 12px;
+                border-left: 4px solid #f97316;
+              ">
+                <div style="
+                  width: 32px;
+                  height: 32px;
+                  background: #f97316;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-weight: bold;
+                  font-size: 14px;
+                ">📅</div>
+                <div>
+                  <div style="font-size: 14px; color: #9ca3af; font-weight: 500;">Date</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${new Date(formData.date).toLocaleDateString('en-US', { 
+                    weekday: 'long',
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</div>
+                </div>
+              </div>
+              
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.7);
+                border-radius: 12px;
+                border-left: 4px solid #f97316;
+              ">
+                <div style="
+                  width: 32px;
+                  height: 32px;
+                  background: #f97316;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-weight: bold;
+                  font-size: 14px;
+                ">🕐</div>
+                <div>
+                  <div style="font-size: 14px; color: #9ca3af; font-weight: 500;">Time</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${(() => {
+                    const [hours, minutes] = formData.time.split(':');
+                    const hour24 = parseInt(hours);
+                    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+                    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                    return `${hour12}:${minutes} ${ampm}`;
+                  })()}</div>
+                </div>
+              </div>
+              
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.7);
+                border-radius: 12px;
+                border-left: 4px solid #f97316;
+              ">
+                <div style="
+                  width: 32px;
+                  height: 32px;
+                  background: #f97316;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-weight: bold;
+                  font-size: 14px;
+                ">👥</div>
+                <div>
+                  <div style="font-size: 14px; color: #9ca3af; font-weight: 500;">Number of Guests</div>
+                  <div style="font-size: 18px; font-weight: 700; color: #1f2937;">${formData.guestCount} ${formData.guestCount === 1 ? 'Guest' : 'Guests'}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="
+              margin-top: 20px;
+              padding: 16px;
+              background: rgba(34, 197, 94, 0.1);
+              border-radius: 12px;
+              border: 1px solid rgba(34, 197, 94, 0.3);
+              text-align: center;
+            ">
+              <div style="
+                font-size: 16px;
+                font-weight: 600;
+                color: #059669;
+                margin-bottom: 4px;
+              ">🎉 Your table is reserved!</div>
+              <div style="
+                font-size: 14px;
+                color: #065f46;
+              ">Please arrive on time to secure your table</div>
+            </div>
+          </div>
+        `,
+        confirmButtonColor: '#f97316',
+        confirmButtonText: '✨ Awesome!',
+        customClass: {
+          popup: 'swal-custom-popup',
+          title: 'swal-custom-title',
+          confirmButton: 'swal-custom-button'
+        },
+        buttonsStyling: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showClass: {
+          popup: 'animate__animated animate__fadeInUp animate__faster'
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOutDown animate__faster'
+        }
+      });
+      
+      setFormData({
+        customerName: user?.name || user?.email || '',
+        selectedTable: '',
+        date: '',
+        time: '',
+        guestCount: 1
+      });
+      
+    } catch (error) {
+      console.error('Failed to create reservation:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Reservation Failed',
+        text: error instanceof Error ? error.message : 'There was an error creating your reservation. Please try again.',
+        confirmButtonColor: '#f97316'
+      });
+    }
+  };
+
+  const cancelReservation = async (reservationId: string) => {
+    const reservation = reservations.find(res => res.id === reservationId);
+    if (!reservation) return;
+
+    const result = await Swal.fire({
+      title: 'Cancel Reservation?',
+      text: 'Are you sure you want to cancel this reservation?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: 'Yes, cancel it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`http://localhost:5555/reservations/${reservationId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(responseData.error || 'Failed to cancel reservation');
+        }
+
+        // Remove the reservation from local state (it's deleted from database)
+        setReservations(reservations.filter(res => res.id !== reservationId));
+        
+        // Remove the table from reserved tables list (it's now available)
+        setReservedTables(reservedTables.filter(tableId => tableId !== reservation.table_id));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Cancelled!',
+          text: 'Your reservation has been cancelled and deleted. The table is now available for other customers.',
+          confirmButtonColor: '#f97316'
+        });
+      } catch (error) {
+        console.error('Failed to cancel reservation:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error instanceof Error ? error.message : 'Failed to cancel reservation. Please try again.',
+          confirmButtonColor: '#f97316'
+        });
+      }
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
     }
   };
 
@@ -203,6 +612,24 @@ export default function Reservations() {
   const getTableNumber = (tableId: number) => {
     const table = tables.find(t => t.id === tableId);
     return table?.table_number || 'Unknown';
+  };
+
+  const formatTime = (timeString: string) => {
+    // Convert HH:MM:SS to HH:MM AM/PM format
+    const [hours, minutes] = timeString.split(':');
+    const hour24 = parseInt(hours);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
 
   return (
@@ -254,11 +681,19 @@ export default function Reservations() {
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                     table.is_available === 'No'
                       ? 'border-red-200 bg-red-50' 
+<<<<<<< HEAD
                       : selectedTable === table.id.toString()
                       ? 'border-amber-500 bg-amber-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                   onClick={() => table.is_available === 'Yes' && setSelectedTable(table.id.toString())}
+=======
+                      : formData.selectedTable === table.id
+                      ? 'border-amber-500 bg-amber-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => table.is_available === 'Yes' && !reservedTables.includes(table.id) && handleInputChange('selectedTable', table.id)}
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -282,18 +717,34 @@ export default function Reservations() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+         <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Make a Reservation</h2>
             
             <form onSubmit={handleReservation} className="space-y-4">
              
               <div>
                 <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+<<<<<<< HEAD
+=======
+                  Your Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.customerName}
+                  onChange={(e) => handleInputChange('customerName', e.target.value)}
+                  className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Enter your name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
                   Selected Table
                 </label>
                 <select
-                  value={selectedTable}
-                  onChange={(e) => setSelectedTable(e.target.value)}
+                  value={formData.selectedTable}
+                  onChange={(e) => handleInputChange('selectedTable', e.target.value)}
                   className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   required
                 >
@@ -313,8 +764,8 @@ export default function Reservations() {
                   </label>
                   <input
                     type="date"
-                    value={reservationDate}
-                    onChange={(e) => setReservationDate(e.target.value)}
+                    value={formData.date}
+                    onChange={(e) => handleInputChange('date', e.target.value)}
                     min={new Date().toISOString().split('T')[0]} // Minimum date is today
                     className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     required
@@ -326,8 +777,8 @@ export default function Reservations() {
                     Time *
                   </label>
                   <select
-                    value={reservationTime}
-                    onChange={(e) => setReservationTime(e.target.value)}
+                    value={formData.time}
+                    onChange={(e) => handleInputChange('time', e.target.value)}
                     className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     required
                   >
@@ -361,8 +812,8 @@ export default function Reservations() {
                 </label>
                 <input
                   type="number"
-                  value={guestCount}
-                  onChange={(e) => setGuestCount(parseInt(e.target.value))}
+                  value={formData.guestCount || 1}
+                  onChange={(e) => handleInputChange('guestCount', e.target.value ? parseInt(e.target.value) : 1)}
                   min="1"
                   max="8"
                   className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -395,7 +846,7 @@ export default function Reservations() {
             </div>
           ) : (
             <div className="grid gap-6">
-              {reservations.map((reservation) => (
+              {reservations.filter(r => r.status !== 'cancelled').map((reservation) => (
                 <div 
                   key={reservation.id} 
                   className={`border-2 rounded-xl p-6 transition-all duration-300 ${
@@ -414,15 +865,26 @@ export default function Reservations() {
                       <div className="grid md:grid-cols-2 gap-4 text-lg">
                         <div>
                           <p className="text-gray-600 dark:text-gray-300">
+<<<<<<< HEAD
                             <span className="font-semibold">Customer:</span> {user?.name}
                           </p>
                           <p className="text-gray-600 dark:text-gray-300">
                             <span className="font-semibold">Date:</span> {reservation.booking_date}
+=======
+                            <span className="font-semibold">Customer:</span> {user?.name || user?.email}
+                          </p>
+                          <p className="text-gray-600 dark:text-gray-300">
+                            <span className="font-semibold">Date:</span> {formatDate(reservation.booking_date)}
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-600 dark:text-gray-300">
+<<<<<<< HEAD
                             <span className="font-semibold">Time:</span> {reservation.booking_time}
+=======
+                            <span className="font-semibold">Time:</span> {formatTime(reservation.booking_time)}
+>>>>>>> 8539841643e0c6d79b745654e694c03cfa0fdcec
                           </p>
                           <p className="text-gray-600 dark:text-gray-300">
                             <span className="font-semibold">Guests:</span> {reservation.no_of_people}
