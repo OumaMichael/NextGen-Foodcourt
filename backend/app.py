@@ -491,8 +491,8 @@ class ReservationDetails(Resource):
 
 
         
-    def delete(self, reservation_id):
-        reservation = Reservation.query.get(reservation_id)
+    def delete(self, id):
+        reservation = Reservation.query.get(id)
         if not reservation:
             return {"error": "Reservation not found"}, 404
 
@@ -502,7 +502,7 @@ class ReservationDetails(Resource):
 
             db.session.delete(reservation)
             db.session.commit()
-            return {"message": "Reservation deleted"}, 200
+            return {"message": "Reservation deleted successfully"}, 200
 
         except Exception as e:
             db.session.rollback()
