@@ -2,34 +2,61 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from 'next/navigation';
+
+
 
 export default function Login() {
+const router = useRouter();
+
   
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+const [formData, setFormData] = useState({
+    email: "",
+    password: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.email || !formData.password) {
-      alert('Please fill in all fields!');
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const { email, password } = formData;
 
-    if (formData.email.includes('owner') || formData.email.includes('@tamugrills.com') || formData.email.includes('@swahiliplates.com')) {
-      
-      localStorage.setItem('userType', 'owner');
-      localStorage.setItem('userName', 'Restaurant Owner');
-      window.location.href = '/owner-dashboard';
+  if (!email || !password) {
+    return toast.error("Please enter both email and password.");
+  }
+
+  try {
+    const res = await fetch("http://localhost:5555/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    console.log(data)
+
+    if (res.ok) {
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast.success("Login successful!");
+
+      setTimeout(() => {
+        if (data.user.role === 'owner') {
+          router.push('/owner-dashboard');
+        } else {
+          router.push('/');
+        }
+      }, 1500);
     } else {
-      
-      localStorage.setItem('userType', 'customer');
-      localStorage.setItem('userName', 'Customer');
-      alert(`Login successful!`);
+      toast.error(data.message || "Login failed. Please try again.");
     }
-  };
+  } catch (error) {
+    toast.error("Server error. Please try again later.");
+  }
+};
+
 
   return (
     <div className="max-w-md mx-auto">
@@ -105,6 +132,7 @@ export default function Login() {
 
      
       </div>
+        <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }

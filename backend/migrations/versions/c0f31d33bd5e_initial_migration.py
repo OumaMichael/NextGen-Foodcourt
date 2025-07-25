@@ -1,8 +1,8 @@
 """initial migration
 
-Revision ID: d36173a3657c
+Revision ID: c0f31d33bd5e
 Revises: 
-Create Date: 2025-07-23 21:51:58.205399
+Create Date: 2025-07-25 08:47:16.248900
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd36173a3657c'
+revision = 'c0f31d33bd5e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,6 +27,7 @@ def upgrade():
     op.create_table('tables',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('table_number', sa.Integer(), nullable=False),
+    sa.Column('capacity', sa.Integer(), nullable=True),
     sa.Column('is_available', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('table_number')
@@ -78,7 +79,8 @@ def upgrade():
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('order_id', sa.Integer(), nullable=True),
     sa.Column('table_id', sa.Integer(), nullable=True),
-    sa.Column('booking_time', sa.DateTime(), nullable=False),
+    sa.Column('booking_date', sa.Date(), nullable=False),
+    sa.Column('booking_time', sa.Time(), nullable=False),
     sa.Column('no_of_people', sa.Integer(), nullable=True),
     sa.Column('status', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),

@@ -89,12 +89,22 @@ with app.app_context():
     db.session.add_all(items)
 
     tables = [
-        Table(table_number=1, is_available="Yes"),
-        Table(table_number=2, is_available="Yes"),
-        Table(table_number=3, is_available="Yes"),
-        Table(table_number=4, is_available="No")
+        Table(table_number=1, capacity='5', is_available="Yes"),
+        Table(table_number=2, capacity='6', is_available="Yes"),
+        Table(table_number=3, capacity='4', is_available="Yes"),
+        Table(table_number=4, capacity='3', is_available="No"),
+        Table(table_number=5, capacity='5', is_available="Yes"),
+        Table(table_number=6, capacity='6', is_available="No"),
+        Table(table_number=7, capacity='3', is_available="Yes"),
+        Table(table_number=8, capacity='4', is_available="Yes"),
+        Table(table_number=9, capacity='5', is_available="Yes"),
+        Table(table_number=10, capacity='4', is_available="Yes")
     ]
     db.session.add_all(tables)
+
+    now = datetime.now()
+    reservation_datetime1 = now + timedelta(minutes=25)
+    reservation_datetime2 = now + timedelta(minutes=25)
 
     order1 = Order(status="Pending", total_price=950, user=customer1)
     order_item1 = OrderItem(order=order1, menu_item=items[1], quantity=1, sub_total=950)
@@ -102,7 +112,8 @@ with app.app_context():
         user=customer1,
         order=order1,
         table=tables[0],
-        booking_time=datetime.now() + timedelta(minutes=25),
+        booking_date=reservation_datetime1.date(),  
+        booking_time=reservation_datetime1.time(),  
         no_of_people=2,
         status="Confirmed"
     )
@@ -110,12 +121,13 @@ with app.app_context():
     order2 = Order(status="Confirmed", total_price=1200, user=customer2)
     order_item2 = OrderItem(order=order2, menu_item=items[3], quantity=2, sub_total=1200)
     reservation2 = Reservation(
-        user=customer2,
-        order=order2,
-        table=tables[1],
-        booking_time=datetime.now() + timedelta(minutes=25),
-        no_of_people=3,
-        status="Confirmed"
+    user=customer2,
+    order=order2,
+    table=tables[1],
+    booking_date=reservation_datetime2.date(), 
+    booking_time=reservation_datetime2.time(),  
+    no_of_people=3,
+    status="Confirmed"
     )
 
     db.session.add_all([order1, order_item1, reservation1, order2, order_item2, reservation2])

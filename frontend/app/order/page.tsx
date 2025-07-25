@@ -24,22 +24,22 @@ export default function Order() {
 
   const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('userType');
 
-  if (!isLoggedIn) {
-    return (
-      <div className="text-center py-12">
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Please Log In</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-          You need to be logged in to place orders
-        </p>
-        <a
-          href="/signup"
-          className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
-        >
-          Sign Up Now
-        </a>
-      </div>
-    );
-  }
+  // if (!isLoggedIn) {
+  //   return (
+  //     <div className="text-center py-12">
+  //       <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Please Log In</h1>
+  //       <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+  //         You need to be logged in to place orders
+  //       </p>
+  //       <a
+  //         href="/signup"
+  //         className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+  //       >
+  //         Sign Up Now
+  //       </a>
+  //     </div>
+  //   );
+  // }
 
   const filteredDishes = selectedRestaurant?.dishes.filter(dish =>
     dish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
