@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { CreditCard, Smartphone, Banknote, CheckCircle } from 'lucide-react';
 
 interface CartItem {
   dishId: string;
@@ -14,8 +15,15 @@ interface CartItem {
   notes?: string;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export default function Checkout() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -28,6 +36,7 @@ export default function Checkout() {
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState({
     mpesaNumber: '',
     cardNumber: '',
@@ -37,10 +46,21 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    
     const savedCart = localStorage.getItem('foodCourtCart');
     if (savedCart) {
       setCart(JSON.parse(savedCart));
+    }
+
+    // Get user info if logged in
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setCustomerInfo(prev => ({
+        ...prev,
+        name: userData.name || '',
+        email: userData.email || ''
+      }));
     }
   }, []);
 
@@ -128,15 +148,40 @@ export default function Checkout() {
       const paymentSuccess = Math.random() > 0.1;
       
       if (paymentSuccess) {
+        // Create order in backend if user is logged in
+        if (user) {
+          try {
+            const token = localStorage.getItem('access_token');
+            const orderResponse = await fetch('http://localhost:5555/orders', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                user_id: user.id,
+                total_price: getFinalTotal(),
+                status: 'pending'
+              })
+            });
+
+            if (orderResponse.ok) {
+              const orderData = await orderResponse.json();
+              console.log('Order created:', orderData);
+            }
+          } catch (error) {
+            console.error('Failed to create order:', error);
+          }
+        }
+
         toast.success('Payment successful! Your order has been placed.');
+        setOrderSuccess(true);
         
         // Clear cart and redirect
-        setCart([]);
-        localStorage.removeItem('foodCourtCart');
-        setShowPaymentModal(false);
-        
-        // Show order confirmation
         setTimeout(() => {
+          setCart([]);
+          localStorage.removeItem('foodCourtCart');
+          setShowPaymentModal(false);
           router.push('/order-confirmation');
         }, 2000);
       } else {
@@ -166,6 +211,17 @@ export default function Checkout() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
+              {orderSuccess ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Payment Successful!</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    Your order has been placed successfully. You will be redirected to the confirmation page.
+                  </p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                </div>
+              ) : (
+                <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Complete Payment</h2>
                 <button
@@ -198,6 +254,10 @@ export default function Checkout() {
 
               {paymentMethod === 'mpesa' && (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Smartphone className="w-6 h-6 text-green-600" />
+                    <span className="font-semibold text-gray-800 dark:text-white">M-Pesa Payment</span>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       M-Pesa Number
@@ -218,6 +278,10 @@ export default function Checkout() {
 
               {paymentMethod === 'card' && (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <CreditCard className="w-6 h-6 text-blue-600" />
+                    <span className="font-semibold text-gray-800 dark:text-white">Card Payment</span>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Card Number
@@ -273,6 +337,10 @@ export default function Checkout() {
 
               {paymentMethod === 'cash' && (
                 <div className="text-center py-4">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <Banknote className="w-6 h-6 text-green-600" />
+                    <span className="font-semibold text-gray-800 dark:text-white">Cash Payment</span>
+                  </div>
                   <div className="text-lg text-gray-600 dark:text-gray-300">
                     You will pay cash upon delivery.
                   </div>
@@ -295,6 +363,8 @@ export default function Checkout() {
                   {processing ? 'Processing...' : `Pay KSh ${getFinalTotal().toLocaleString()}`}
                 </button>
               </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -488,6 +558,7 @@ export default function Checkout() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="mr-2"
                     />
+                    <Smartphone className="w-4 h-4 mr-2 text-green-600" />
                     <span>M-Pesa</span>
                   </label>
                   <label className="flex items-center">
@@ -498,6 +569,7 @@ export default function Checkout() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="mr-2"
                     />
+                    <Banknote className="w-4 h-4 mr-2 text-green-600" />
                     <span>Cash on Delivery</span>
                   </label>
                   <label className="flex items-center">
@@ -508,6 +580,7 @@ export default function Checkout() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="mr-2"
                     />
+                    <CreditCard className="w-4 h-4 mr-2 text-blue-600" />
                     <span>Credit/Debit Card</span>
                   </label>
                 </div>

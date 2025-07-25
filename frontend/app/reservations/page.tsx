@@ -146,10 +146,9 @@ export default function Reservations() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          user_id: user?.id,
           table_id: parseInt(selectedTable),
           booking_date: reservationDate,
-          booking_time: reservationTime,
+          booking_time: reservationTime + ':00',
           no_of_people: guestCount,
           status: 'confirmed'
         })

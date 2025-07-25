@@ -10,6 +10,59 @@ from datetime import datetime, time
 from config import app, db, api, jwt, jwt_blacklist
 from models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Reservation
 
+# ------------------ USER PROFILE ------------------ #
+class UserProfile(Resource):
+    @jwt_required()
+    def get(self):
+        user_identity = get_jwt_identity()
+        user = User.query.get(user_identity['id'])
+        if not user:
+            return {"error": "User not found"}, 404
+        return user.to_dict(rules=('-orders', '-reservations', '-outlets', '-_password_hash'))
+    
+    @jwt_required()
+    def put(self):
+        user_identity = get_jwt_identity()
+        user = User.query.get(user_identity['id'])
+        if not user:
+            return {"error": "User not found"}, 404
+        
+        data = request.get_json()
+        if 'name' in data:
+            user.name = data['name']
+        if 'email' in data:
+            user.email = data['email']
+        if 'phone_no' in data:
+            user.phone_no = data['phone_no']
+            
+        db.session.commit()
+        return user.to_dict(rules=('-orders', '-reservations', '-outlets', '-_password_hash'))
+
+class ChangePassword(Resource):
+    @jwt_required()
+    def put(self):
+        user_identity = get_jwt_identity()
+        user = User.query.get(user_identity['id'])
+        if not user:
+            return {"error": "User not found"}, 404
+        
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        if not current_password or not new_password:
+            return {"error": "Current password and new password are required"}, 400
+        
+        if not user.authenticate(current_password):
+            return {"error": "Current password is incorrect"}, 400
+        
+        if len(new_password) < 6:
+            return {"error": "New password must be at least 6 characters long"}, 400
+        
+        user.password_hash = new_password
+        db.session.commit()
+        return {"message": "Password changed successfully"}, 200
+
 @app.route('/')
 def home():
     return "<h1>Welcome to NextGen Food Court APIs</h1>"
@@ -405,49 +458,59 @@ class TableDetails(Resource):
 
 # ------------------ RESERVATIONS ------------------ #
 class ReservationLists(Resource):
+    @jwt_required()
     def get(self):
-        reservations = Reservation.query.all()
-        return [
-            reservation.to_dict(rules=('-user', '-table', '-order')) 
-            for reservation in reservations
-        ]
+        user_identity = get_jwt_identity()
+        user_id = user_identity['id']
+        
+        # If user is admin/owner, return all reservations, otherwise only user's reservations
+        if user_identity.get('role') in ['admin', 'owner']:
+            reservations = Reservation.query.all()
+        else:
+            reservations = Reservation.query.filter_by(user_id=user_id).all()
+        
+        return [reservation.to_dict() for reservation in reservations]
 
+    @jwt_required()
     def post(self):
+        user_identity = get_jwt_identity()
         data = request.get_json()
 
         table = db.session.get(Table, data['table_id'])
         if not table:
             return {"error": "Table not found"}, 404
 
-        if table.is_available != 'Yes':
+        if table.is_available == 'No':
             return {"error": "Table is not available"}, 400
 
         try:
             reservation = Reservation(
-                user_id=data['user_id'],
+                user_id=user_identity['id'],
                 table_id=data['table_id'],
                 booking_date=datetime.strptime(data['booking_date'], "%Y-%m-%d").date(),
                 booking_time=datetime.strptime(data['booking_time'], "%H:%M:%S").time(),
                 status=data.get('status', 'confirmed'),
                 no_of_people=data.get('no_of_people', 1)
             )
-            table.is_available = 'No' 
+            table.is_available = 'No'
 
             db.session.add(reservation)
             db.session.commit()
-            return reservation.to_dict(rules=('-user', '-table', '-order')), 201
+            return reservation.to_dict(), 201
 
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 500
         
 class ReservationDetails(Resource):
+    @jwt_required()
     def get(self, id):
         reservation = Reservation.query.get(id)
         if not reservation:
             return {"error": "Reservation not found."}, 404
-        return reservation.to_dict(rules=('-user', '-table', '-order'))
+        return reservation.to_dict()
 
+    @jwt_required()
     def patch(self, id):
         data = request.get_json()
         reservation = Reservation.query.get(id)
@@ -456,14 +519,11 @@ class ReservationDetails(Resource):
             return {"error": "Reservation not found"}, 404
 
         try:
-            if 'user_id' in data:
-                reservation.user_id = data['user_id']
-
             if 'table_id' in data and data['table_id'] != reservation.table_id:
                 new_table = Table.query.get(data['table_id'])
                 if not new_table:
                     return {"error": "New table not found"}, 404
-                if new_table.is_available != 'Yes':
+                if new_table.is_available == 'No':
                     return {"error": "New table is not available"}, 400
 
                 old_table = Table.query.get(reservation.table_id)
@@ -483,14 +543,14 @@ class ReservationDetails(Resource):
                 reservation.no_of_people = data['no_of_people']
 
             db.session.commit()
-            return reservation.to_dict(rules=('-user', '-table', '-order')), 200
+            return reservation.to_dict(), 200
 
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 500
 
 
-        
+    @jwt_required()
     def delete(self, reservation_id):
         reservation = Reservation.query.get(reservation_id)
         if not reservation:
@@ -498,7 +558,8 @@ class ReservationDetails(Resource):
 
         try:
             table = reservation.table
-            table.is_available = 'Yes'
+            if table:
+                table.is_available = 'Yes'
 
             db.session.delete(reservation)
             db.session.commit()
@@ -537,6 +598,9 @@ api.add_resource(TableDetails, '/tables/<int:id>')
 
 api.add_resource(ReservationLists, '/reservations')
 api.add_resource(ReservationDetails, '/reservations/<int:id>')
+
+api.add_resource(UserProfile, '/user/profile')
+api.add_resource(ChangePassword, '/user/change-password')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

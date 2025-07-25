@@ -30,13 +30,24 @@ export default function Header() {
     const checkAuthState = () => {
       const storedUserType = localStorage.getItem('userType');
       const storedUserName = localStorage.getItem('userName');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setUserType(userData.role);
+        setUserName(userData.name);
+        setIsLoggedIn(true);
+        setIsOwner(userData.role === 'owner' || userData.role === 'admin');
+      } else {
       setUserType(storedUserType);
       setUserName(storedUserName);
       setIsLoggedIn(!!storedUserType);
       setIsOwner(storedUserType === 'owner');
+      }
 
       // Only load cart for customers
-      if (storedUserType === 'customer') {
+      const userRole = storedUser ? JSON.parse(storedUser).role : storedUserType;
+      if (userRole === 'customer') {
         const savedCart = localStorage.getItem('foodCourtCart');
         if (savedCart) {
           const cart = JSON.parse(savedCart);
@@ -57,10 +68,23 @@ export default function Header() {
     checkAuthState();
 
     const handleAuthChange = () => checkAuthState();
+    const handleCartUpdate = () => {
+      const savedCart = localStorage.getItem('foodCourtCart');
+      if (savedCart) {
+        const cart = JSON.parse(savedCart);
+        const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        setCartCount(totalItems);
+      } else {
+        setCartCount(0);
+      }
+    };
+    
     window.addEventListener('authChange', handleAuthChange);
+    window.addEventListener('cartUpdated', handleCartUpdate);
 
     return () => {
       window.removeEventListener('authChange', handleAuthChange);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
     };
   }, [pathname]);
 
@@ -99,6 +123,7 @@ export default function Header() {
     { href: '/', label: 'Home' },
     { href: '/order', label: 'Order' },
     { href: '/reservations', label: 'Reservations' },
+    { href: '/profile', label: 'Profile' },
     ...(isLoggedIn
       ? [
           { href: '#', label: `Hi, ${userName}`, isUserGreeting: true },
