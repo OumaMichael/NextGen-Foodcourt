@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 export default function Home() {
   const [restaurants, setRestaurants] = useState([]);
@@ -59,11 +60,29 @@ export default function Home() {
               Reserve your table in advance and order from your favorite outlets
               while enjoying our comfortable shared seating experience.
             </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/order"
+                className="no-underline bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                Order Now
+              </Link>
+              <button
+                onClick={() => {
+                  const restaurantsSection = document.getElementById('restaurants-section');
+                  restaurantsSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-white/30 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+              >
+                Explore Restaurants
+                <ChevronDown className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-       <div className="mb-16">
+       <div id="restaurants-section" className="mb-16">
         <div className="text-center mb-8">
           <h2 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">
             Discover Your Next Favorite Spot

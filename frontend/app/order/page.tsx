@@ -2,13 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { restaurants } from '@/lib/data';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+interface MenuItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
+interface MenuItemWithOutlet extends MenuItem {
+  outlet_id?: number;
+}
+
+interface Restaurant {
+  id: number;
+  name: string;
+  description: string;
+  cuisine: {
+    name: string;
+  };
+  menu_items?: MenuItemWithOutlet[];
+}
 
 interface OrderItem {
   dishId: string;
   name: string;
   price: number;
   quantity: number;
+  restaurantName: string;
   notes: string;
 }
 
@@ -16,56 +40,78 @@ export default function Order() {
   const searchParams = useSearchParams();
   const outletId = searchParams.get('outlet'); 
   
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItemWithOutlet[]>([]);
   const [selectedOutlet, setSelectedOutlet] = useState(outletId || '');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  const selectedRestaurant = restaurants.find(r => r.id === selectedOutlet);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [outletsRes, menuRes] = await Promise.all([
+          fetch('http://localhost:5555/outlets'),
+          fetch('http://localhost:5555/menu-items')
+        ]);
 
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('userType');
+        const outletsData = await outletsRes.json();
+        const menuData = await menuRes.json();
 
-  // if (!isLoggedIn) {
-  //   return (
-  //     <div className="text-center py-12">
-  //       <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Please Log In</h1>
-  //       <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-  //         You need to be logged in to place orders
-  //       </p>
-  //       <a
-  //         href="/signup"
-  //         className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
-  //       >
-  //         Sign Up Now
-  //       </a>
-  //     </div>
-  //   );
-  // }
+        setRestaurants(outletsData);
+        setMenuItems(menuData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast.error('Failed to load restaurants and menu items');
+      }
+    };
 
-  const filteredDishes = selectedRestaurant?.dishes.filter(dish =>
+    fetchData();
+  }, []);
+
+  // Load cart from localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem('foodCourtCart');
+    if (savedCart) {
+      setOrderItems(JSON.parse(savedCart));
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('foodCourtCart', JSON.stringify(orderItems));
+    // Dispatch event to update header cart count
+    window.dispatchEvent(new Event('cartUpdated'));
+  }, [orderItems]);
+  
+  const selectedRestaurant = restaurants.find(r => r.id.toString() === selectedOutlet);
+  const restaurantMenuItems = menuItems.filter(item => item.outlet_id?.toString() === selectedOutlet);
+
+  const filteredDishes = restaurantMenuItems.filter(dish =>
     dish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dish.description.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  );
 
-  const addToOrder = (dishId: string, name: string, price: number) => {
-    const existingItem = orderItems.find(item => item.dishId === dishId);
+  const addToOrder = (dishId: number, name: string, price: number, restaurantName: string) => {
+    const existingItem = orderItems.find(item => item.dishId === dishId.toString());
     
     if (existingItem) {
- 
       setOrderItems(orderItems.map(item =>
-        item.dishId === dishId 
+        item.dishId === dishId.toString()
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
-     
       setOrderItems([...orderItems, {
-        dishId,
+        dishId: dishId.toString(),
         name,
         price,
         quantity: 1,
+        restaurantName,
         notes: ''
       }]);
     }
+    
+    toast.success(`${name} added to cart!`);
   };
 
   const updateQuantity = (dishId: string, quantity: number) => {
@@ -96,10 +142,12 @@ export default function Order() {
 
   const handleCheckout = () => {
     if (orderItems.length === 0) {
-      alert('Please add items to your order first!');
+      toast.error('Please add items to your order first!');
       return;
     }
-    alert(`Order submitted! Total: KSh ${getTotalPrice().toLocaleString()}.`);
+    
+    // Navigate to checkout page
+    window.location.href = '/checkout';
   };
 
   return (
@@ -168,12 +216,13 @@ export default function Order() {
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800">{dish.name}</h4>
                       <p className="text-sm text-gray-600">{dish.description}</p>
+                      <p className="text-xs text-orange-600 font-medium mt-1">{dish.category}</p>
                       <p className="text-lg font-semibold text-green-600 mt-1">
                         KSh {dish.price.toLocaleString()}
                       </p>
                     </div>
                     <button
-                      onClick={() => addToOrder(dish.id, dish.name, dish.price)}
+                      onClick={() => addToOrder(dish.id, dish.name, dish.price, selectedRestaurant.name)}
                       className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
                       Add to Order
@@ -184,6 +233,12 @@ export default function Order() {
                 {filteredDishes.length === 0 && searchTerm && (
                   <div className="text-center py-8">
                     <p className="text-gray-500 text-lg">No dishes found matching "{searchTerm}"</p>
+                  </div>
+                )}
+                
+                {filteredDishes.length === 0 && !searchTerm && selectedRestaurant && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-lg">No menu items available for this restaurant</p>
                   </div>
                 )}
               </div>
@@ -244,7 +299,7 @@ export default function Order() {
                     onClick={handleCheckout}
                     className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
-                    Proceed to Checkout
+                    Go to Checkout
                   </button>
                 </div>
               </div>
@@ -252,6 +307,7 @@ export default function Order() {
           </div>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
 }
