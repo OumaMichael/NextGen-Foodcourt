@@ -33,7 +33,7 @@ export default function Header() {
       setUserType(storedUserType);
       setUserName(storedUserName);
       setIsLoggedIn(!!storedUserType);
-      setIsOwner(storedUserType === 'owner');
+      setIsOwner(storedUserType === 'admin');
 
       // Only load cart for customers
       if (storedUserType === 'customer') {
@@ -91,8 +91,8 @@ export default function Header() {
 
   const ownerNavItems = [
     { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/order-management', label: 'Order Management', icon: ClipboardList }
+    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList }
   ];
 
   const customerNavItems = [
@@ -108,11 +108,11 @@ export default function Header() {
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
-  
+
+  // Only show owner navbar on owner dashboard pages
   const isOwnerDashboardPage = pathname.startsWith('/owner-dashboard');
   const shouldShowOwnerNav = isOwner && isOwnerDashboardPage;
   const shouldShowCustomerNav = !isOwnerDashboardPage;
-  
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
@@ -130,7 +130,7 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
+            {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
               <div key={item.href}>
                 {item.isUserGreeting ? (
                   <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -152,7 +152,7 @@ export default function Header() {
             ))}
 
             {/* Show cart only for customers */}
-            {!isOwner && (
+            {shouldShowCustomerNav && !isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
@@ -185,7 +185,7 @@ export default function Header() {
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-4">
             {/* Show cart only for customers */}
-            {!isOwner && (
+            {shouldShowCustomerNav && !isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
@@ -216,7 +216,7 @@ export default function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4">
             <div className="flex flex-col space-y-4">
-              {navItems.map((item) => (
+              {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
                 <div key={item.href}>
                   {item.isUserGreeting ? (
                     <span className="block px-4 py-2 text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -253,4 +253,3 @@ export default function Header() {
     </nav>
   );
 }
-
