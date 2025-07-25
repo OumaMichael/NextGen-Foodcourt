@@ -1,7 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { tables } from '@/lib/data';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Swal from 'sweetalert2';
+
+interface Table {
+  id: string;
+  table_number: number;
+  capacity: number;
+  is_available: string;
+}
 
 interface Reservation {
   id: string;
@@ -13,8 +22,27 @@ interface Reservation {
   status: 'confirmed' | 'pending' | 'cancelled';
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface FormData {
+  customerName: string;
+  selectedTable: string;
+  date: string;
+  time: string;
+  guestCount: number;
+}
+
 export default function Reservations() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
  
+  const [tables, setTables] = useState<Table[]>([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [reservationDate, setReservationDate] = useState('');
   const [reservationTime, setReservationTime] = useState('');
@@ -24,27 +52,106 @@ export default function Reservations() {
   const [showReservations, setShowReservations] = useState(false);
   const [reservedTables, setReservedTables] = useState<string[]>([]);
 
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('userType');
 
-  if (!isLoggedIn) {
-    return (
-      <div className="text-center py-12">
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Please Log In</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-          You need to be logged in to make reservations
-        </p>
-        <a
-          href="/signup"
-          className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
-        >
-          Sign Up Now
-        </a>
+    const [formData, setFormData] = useState<FormData>({
+    customerName: '',
+    selectedTable: '',
+    date: '',
+    time: '',
+    guestCount: 1
+  });
+
+ // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const tablesRes = await fetch('http://localhost:5555/tables');
+  //       const tablesData = await tablesRes.json();
+  //       setTables(tablesData);
+  //     } catch (error) {
+  //       console.error("Failed to fetch data:", error);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, [])
+
+    // Check if user is authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const storedUser = localStorage.getItem('user');
+        
+        if (!token || !storedUser) {
+          router.push('/login');
+          return;
+        }
+
+        const response = await fetch('http://localhost:5555/check-auth', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user');
+          router.push('/login');
+          return;
+        }
+
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setCustomerName(userData.name || userData.email);
+        setFormData(prev => ({ ...prev, customerName: userData.name || userData.email }));
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchData = async () => {
+      try {
+        const tablesRes = await fetch('http://localhost:5555/tables');
+        const tablesData = await tablesRes.json();
+        setTables(tablesData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to fetch tables data'
+        });
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (loading) {
+  return (
+    <div className="d-flex justify-content-center align-items-center min-vh-100">
+      <div className="spinner-grow text-warning" role="status">
+        <span className="visually-hidden">Loading...</span>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
 
   const availableTables = tables.filter(table => 
-    table.status === 'available' && !reservedTables.includes(table.id)
+     table.is_available=== 'Yes' && !reservedTables.includes(table.id)
   );
 
   const handleReservation = (e: React.FormEvent) => {
@@ -70,7 +177,7 @@ export default function Reservations() {
     setReservations([...reservations, newReservation]);
     setReservedTables([...reservedTables, selectedTable]);
     
-    alert(`Table reserved successfully!\n\nTable: ${selectedTableInfo?.number}\nDate: ${reservationDate}\nTime: ${reservationTime}\nGuests: ${guestCount}`);
+    alert(`Table reserved successfully!\n\nTable: ${selectedTableInfo?.table_number}\nDate: ${reservationDate}\nTime: ${reservationTime}\nGuests: ${guestCount}`);
     
     setSelectedTable('');
     setReservationDate('');
@@ -95,7 +202,7 @@ export default function Reservations() {
 
   const getTableNumber = (tableId: string) => {
     const table = tables.find(t => t.id === tableId);
-    return table?.number || 'Unknown';
+    return table?.table_number || 'Unknown';
   };
 
   return (
@@ -144,29 +251,29 @@ export default function Reservations() {
                 <div 
                   key={table.id} 
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                    table.status === 'reserved' || reservedTables.includes(table.id)
+                    table.is_available === 'No' || reservedTables.includes(table.id)
                       ? 'border-red-200 bg-red-50' 
                       : selectedTable === table.id
                       ? 'border-amber-500 bg-amber-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => table.status === 'available' && !reservedTables.includes(table.id) && setSelectedTable(table.id)}
+                  onClick={() => table.is_available === 'Yes' && !reservedTables.includes(table.id) && setSelectedTable(table.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                        Table {table.number}
+                        Table {table.table_number}
                       </h3>
                       <p className="text-lg text-gray-600 dark:text-gray-300">
                         Capacity: {table.capacity} people
                       </p>
                     </div>
                     <span className={`px-4 py-2 rounded-full text-lg font-semibold ${
-                      table.status === 'available' && !reservedTables.includes(table.id)
+                      table.is_available === 'Yes' && !reservedTables.includes(table.id)
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {table.status === 'available' && !reservedTables.includes(table.id) ? 'Available' : 'Reserved'}
+                      {table.is_available === 'Yes' && !reservedTables.includes(table.id) ? 'Available' : 'Reserved'}
                     </span>
                   </div>
                 </div>
@@ -205,7 +312,7 @@ export default function Reservations() {
                   <option value="">Choose a table...</option>
                   {availableTables.map((table) => (
                     <option key={table.id} value={table.id}>
-                      Table {table.number} (Capacity: {table.capacity})
+                      Table {table.table_number} (Capacity: {table.capacity})
                     </option>
                   ))}
                 </select>

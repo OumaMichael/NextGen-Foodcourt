@@ -116,7 +116,7 @@ export default function Signup() {
                   type="button"
                   onClick={() => setFormData({ ...formData, userType: 'customer' })}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                    formData.userType === 'user' 
+                    formData.userType === 'customer' 
                       ? 'border-amber-500 bg-amber-50 text-amber-700' 
                       : 'border-gray-300 hover:border-gray-400'
                   }`}

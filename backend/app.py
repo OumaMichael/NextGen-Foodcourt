@@ -4,6 +4,8 @@ from flask import request, session
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity,  get_jwt
+from datetime import datetime, time
+
 
 from config import app, db, api, jwt, jwt_blacklist
 from models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Reservation
@@ -187,7 +189,7 @@ class OutletDetails(Resource):
 class MenuItemLists(Resource):
     def get(self):
         items = MenuItem.query.all()
-        return [item.to_dict(rules=('-outlet', '-order_items',)) for item in items]
+        return [item.to_dict(rules=( '-order_items',)) for item in items]
 
     def post(self):
         data = request.get_json()
@@ -412,32 +414,33 @@ class ReservationLists(Resource):
 
     def post(self):
         data = request.get_json()
-        try:
-            # Check table availability
-            table = Table.query.get(data['table_id'])
-            if table.status != 'available':
-                return {"error": "Table is not available for reservation"}, 400
 
+        table = db.session.get(Table, data['table_id'])
+        if not table:
+            return {"error": "Table not found"}, 404
+
+        if table.is_available != 'Yes':
+            return {"error": "Table is not available"}, 400
+
+        try:
             reservation = Reservation(
                 user_id=data['user_id'],
                 table_id=data['table_id'],
-                reservation_date=data['reservation_date'],
-                reservation_time=data['reservation_time'],
+                booking_date=datetime.strptime(data['booking_date'], "%Y-%m-%d").date(),
+                booking_time=datetime.strptime(data['booking_time'], "%H:%M:%S").time(),
                 status=data.get('status', 'confirmed'),
-                party_size=data.get('party_size', 1)
+                no_of_people=data.get('no_of_people', 1)
             )
-            
-            # Update table status
-            table.status = 'reserved'
-            
+            table.is_available = 'No' 
+
             db.session.add(reservation)
             db.session.commit()
-            
-            return reservation.to_dict(rules=('-user.reservations', '-table.reservations', '-order')), 201
-        except IntegrityError:
-            db.session.rollback()
-            return {"message": "Reservation creation failed"}, 400
+            return reservation.to_dict(rules=('-user', '-table', '-order')), 201
 
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
+        
 class ReservationDetails(Resource):
     def get(self, id):
         reservation = Reservation.query.get(id)
@@ -446,51 +449,64 @@ class ReservationDetails(Resource):
         return reservation.to_dict(rules=('-user', '-table', '-order'))
 
     def patch(self, id):
-        reservation = Reservation.query.get(id)
-        if not reservation:
-            return {"error": "Reservation not found."}, 404
-        
         data = request.get_json()
-        
-        # Check if changing table
-        if 'table_id' in data:
-            # Release old table
-            if reservation.table:
-                reservation.table.status = 'available'
-            
-            # Assign new table
-            new_table = Table.query.get(data['table_id'])
-            if new_table.status != 'available':
-                return {"error": "New table is not available"}, 400
-            
-            new_table.status = 'reserved'
-            reservation.table_id = data['table_id']
-        
-        # Update other fields
-        if 'reservation_date' in data:
-            reservation.reservation_date = data['reservation_date']
-        if 'reservation_time' in data:
-            reservation.reservation_time = data['reservation_time']
-        if 'status' in data:
-            reservation.status = data['status']
-        if 'party_size' in data:
-            reservation.party_size = data['party_size']
-        
-        db.session.commit()
-        return reservation.to_dict(rules=('-user.reservations', '-table.reservations', '-order'))
-
-    def delete(self, id):
         reservation = Reservation.query.get(id)
+
         if not reservation:
-            return {"error": "Reservation not found."}, 404
+            return {"error": "Reservation not found"}, 404
+
+        try:
+            if 'user_id' in data:
+                reservation.user_id = data['user_id']
+
+            if 'table_id' in data and data['table_id'] != reservation.table_id:
+                new_table = Table.query.get(data['table_id'])
+                if not new_table:
+                    return {"error": "New table not found"}, 404
+                if new_table.is_available != 'Yes':
+                    return {"error": "New table is not available"}, 400
+
+                old_table = Table.query.get(reservation.table_id)
+                if old_table:
+                    old_table.is_available = 'Yes'
+
+                reservation.table_id = new_table.id
+                new_table.is_available = 'No'
+
+            if 'booking_date' in data:
+                reservation.booking_date = datetime.strptime(data['booking_date'], "%Y-%m-%d").date()
+            if 'booking_time' in data:
+                reservation.booking_time = datetime.strptime(data['booking_time'], "%H:%M:%S").time()
+            if 'status' in data:
+                reservation.status = data['status']
+            if 'no_of_people' in data:
+                reservation.no_of_people = data['no_of_people']
+
+            db.session.commit()
+            return reservation.to_dict(rules=('-user', '-table', '-order')), 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
+
+
         
-        # Release the table
-        if reservation.table:
-            reservation.table.status = 'available'
-        
-        db.session.delete(reservation)
-        db.session.commit()
-        return {"message": "Reservation deleted successfully"}
+    def delete(self, reservation_id):
+        reservation = Reservation.query.get(reservation_id)
+        if not reservation:
+            return {"error": "Reservation not found"}, 404
+
+        try:
+            table = reservation.table
+            table.is_available = 'Yes'
+
+            db.session.delete(reservation)
+            db.session.commit()
+            return {"message": "Reservation deleted"}, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 500
 
 # ------------------ ROUTES ------------------ #
 api.add_resource(Register, '/register')

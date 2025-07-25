@@ -139,6 +139,7 @@ class Table(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     table_number = db.Column(db.Integer, unique=True, nullable=False)
+    capacity = db.Column(db.Integer)
     is_available = db.Column(db.String)
 
     reservations = db.relationship('Reservation', back_populates='table', cascade='all, delete-orphan')
@@ -154,7 +155,8 @@ class Reservation(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'))
     table_id = db.Column(db.Integer, db.ForeignKey('tables.id'))
-    booking_time = db.Column(db.DateTime, nullable=False)
+    booking_date = db.Column(db.Date, nullable=False)  
+    booking_time = db.Column(db.Time, nullable=False)  
     no_of_people = db.Column(db.Integer)
     status = db.Column(db.String)
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
