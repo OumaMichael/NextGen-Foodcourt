@@ -2,32 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { fetchCuisines, fetchOutlets, fetchMenuItems } from '@/lib/api';
 
-interface Dish {
+interface MenuItem {
   id: number;
   name: string;
   description: string;
   price: number;
-  isPopular?: boolean;
+  category: string;
+  outlet_id: number;
 }
 
 interface Restaurant {
   id: number;
   name: string;
   img_url: string;
-  cuisine: { name: string };
+  cuisine: { 
+    id: number;
+    name: string;
+    img_url: string;
+  };
   description: string;
-  dishes?: Dish[];
+  cuisine_id: number;
+  menuItems?: MenuItem[];
 }
 
 interface Cuisine {
+  id: number;
   name: string;
-  image: string;
+  img_url: string;
 }
 
 export default function BrowseCuisines() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const searchParams = useSearchParams();
   const cuisineParam = searchParams.get('cuisine') || '';
@@ -39,23 +49,42 @@ export default function BrowseCuisines() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [restaurantsRes, cuisinesRes] = await Promise.all([
-          fetch('http://localhost:5555/outlets'),
-          fetch('http://localhost:5555/cuisines'),
+        setLoading(true);
+        
+        const [cuisinesData, restaurantsData, menuItemsData] = await Promise.all([
+          fetchCuisines(),
+          fetchOutlets(),
+          fetchMenuItems(),
         ]);
 
-        const restaurantsData = await restaurantsRes.json();
-        const cuisinesData = await cuisinesRes.json();
-
-        setRestaurants(restaurantsData);
         setCuisines(cuisinesData);
+        setRestaurants(restaurantsData);
+        setMenuItems(menuItemsData);
+
+        const restaurantsWithMenus = restaurantsData.map((restaurant: any) => ({
+          ...restaurant,
+          menuItems: menuItemsData.filter((item: MenuItem) => item.outlet_id === restaurant.id)
+        }));
+
+        setRestaurants(restaurantsWithMenus);
       } catch (error) {
         console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
+        <div className="w-12 h-12 border-4 border-orange-500 border-solid rounded-full border-t-transparent animate-spin"></div>
+        <p className="text-orange-600 text-lg">Loading cuisines...</p>
+      </div>
+    );
+  }
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const cuisineName = restaurant.cuisine?.name || '';
@@ -104,12 +133,43 @@ export default function BrowseCuisines() {
           >
             <option value="">All Cuisines</option>
             {cuisines.map((cuisine) => (
-              <option key={cuisine.name} value={cuisine.name}>
+              <option key={cuisine.id} value={cuisine.name}>
                 {cuisine.name}
               </option>
             ))}
           </select>
         </div>
+
+        {/* Cuisine Cards with Images */}
+        {!selectedCuisine && (
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Popular Cuisines</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {cuisines.map((cuisine) => (
+                <button
+                  key={cuisine.id}
+                  onClick={() => setSelectedCuisine(cuisine.name)}
+                  className="group relative overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                >
+                  <div className="aspect-w-16 aspect-h-9 h-48">
+                    <img
+                      src={cuisine.img_url || '/api/placeholder/400/300'}
+                      alt={cuisine.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-xl font-bold text-white mb-1">{cuisine.name}</h3>
+                    <p className="text-sm text-gray-200">
+                      {restaurants.filter(r => r.cuisine?.name === cuisine.name).length} restaurants
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedCuisine && restaurantsForCuisine.length > 1 && (
@@ -131,7 +191,7 @@ export default function BrowseCuisines() {
                 <h3 className="text-xl font-bold text-gray-800 dark:text-white">{restaurant.name}</h3>
                 <p className="text-lg text-gray-600 dark:text-gray-300 mt-2">{restaurant.description}</p>
                 <p className="text-lg text-orange-600 dark:text-orange-400 mt-3 font-semibold">
-                  {restaurant.dishes?.length || 0} dishes available
+                  {restaurant.menuItems?.length || 0} dishes available
                 </p>
               </button>
             ))}
@@ -141,72 +201,119 @@ export default function BrowseCuisines() {
 
       {selectedRestaurantData && (
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-            Menu - {selectedRestaurantData.name}
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {(selectedRestaurantData.dishes || []).map((dish) => (
-              <div
-                key={dish.id}
-                className="border-2 border-gray-200 dark:border-gray-600 rounded-xl p-6 bg-white dark:bg-gray-700 hover:shadow-lg transition-all duration-300"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="text-xl font-bold text-gray-800 dark:text-white">{dish.name}</h4>
-                  {dish.isPopular && (
-                    <span className="text-sm bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full font-semibold">
-                      Popular
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+              Menu - {selectedRestaurantData.name}
+            </h2>
+            <button
+              onClick={() => setSelectedRestaurant(null)}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300"
+            >
+              ← Back to Restaurants
+            </button>
+          </div>
+          
+          {selectedRestaurantData.menuItems && selectedRestaurantData.menuItems.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-6">
+              {selectedRestaurantData.menuItems.map((menuItem) => (
+                <div
+                  key={menuItem.id}
+                  className="border-2 border-gray-200 dark:border-gray-600 rounded-xl p-6 bg-white dark:bg-gray-700 hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="text-xl font-bold text-gray-800 dark:text-white">{menuItem.name}</h4>
+                    <span className="text-sm bg-gradient-to-r from-blue-400 to-purple-400 text-white px-3 py-1 rounded-full font-semibold">
+                      {menuItem.category}
                     </span>
-                  )}
+                  </div>
+                  <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">{menuItem.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      KSh {menuItem.price.toLocaleString()}
+                    </span>
+                    <a
+                      href={`/order?outlet=${selectedRestaurantData.id}`}
+                      className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    >
+                      Order Now
+                    </a>
+                  </div>
                 </div>
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">{dish.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    KSh {dish.price.toLocaleString()}
-                  </span>
-                  <a
-                    href={`/order?outlet=${selectedRestaurantData.id}`}
-                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-xl text-gray-500 dark:text-gray-400">
+                No menu items available for this restaurant yet.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedCuisine && filteredRestaurants.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-xl text-gray-500 dark:text-gray-400">
+            No restaurants found for {selectedCuisine} cuisine.
+          </p>
+        </div>
+      )}
+
+      {selectedCuisine && (
+        <div className="mb-6">
+          <button
+            onClick={() => {
+              setSelectedCuisine('');
+              setSelectedRestaurant(null);
+            }}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl text-lg font-semibold transition-all duration-300"
+          >
+            ← Back to All Cuisines
+          </button>
+        </div>
+      )}
+
+      {selectedCuisine && filteredRestaurants.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">
+            {selectedCuisine} Restaurants
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredRestaurants.map((restaurant) => (
+              <div
+                key={restaurant.id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              >
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={restaurant.img_url }
+                    alt={restaurant.name}
+                    className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                    {restaurant.name}
+                  </h3>
+                  <p className="text-lg text-orange-600 dark:text-orange-400 font-semibold mb-3">
+                    {restaurant.cuisine?.name}
+                  </p>
+                  <p className="text-gray-600 dark:text-gray-300 text-lg mb-4 line-clamp-3">
+                    {restaurant.description}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {restaurant.menuItems?.length || 0} menu items available
+                  </p>
+                  <button
+                    onClick={() => setSelectedRestaurant(restaurant.id)}
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
-                    Order Now
-                  </a>
+                    View Menu
+                  </button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {!selectedCuisine && (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredRestaurants.map((restaurant) => (
-            <div
-              key={restaurant.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col h-80"
-            >
-              <div className="p-6 flex flex-col justify-between flex-grow">
-                <div>
-                <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                  {restaurant.name}
-                </h3>
-                <p className="text-lg text-orange-600 dark:text-orange-400 font-semibold mb-3">
-                  {restaurant.cuisine?.name}
-                </p>
-                <p className="text-gray-600 dark:text-gray-300 text-lg mb-6 line-clamp-3">
-                  {restaurant.description}
-                </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedCuisine(restaurant.cuisine?.name || '');
-                    setSelectedRestaurant(restaurant.id);
-                  }}
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
-                >
-                  View Menu
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 

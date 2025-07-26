@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import { 
+  createCompleteOrder, 
+  fetchAvailableTables, 
+  createReservation,
+  isAuthenticated, 
+  getCurrentUser 
+} from '@/lib/api';
 
 interface CartItem {
   dishId: string;
@@ -10,6 +18,13 @@ interface CartItem {
   quantity: number;
   restaurantName: string;
   notes?: string;
+}
+
+interface Table {
+  id: number;
+  table_number: number;
+  capacity: number;
+  is_available: string;
 }
 
 export default function Checkout() {
@@ -22,15 +37,43 @@ export default function Checkout() {
     specialInstructions: ''
   });
   const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
+    // Check authentication
+    if (!isAuthenticated()) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to proceed with checkout',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
+        router.push('/login');
+      });
+      return;
+    }
+
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    
+    // Pre-fill customer info if user is logged in
+    if (currentUser) {
+      setCustomerInfo(prev => ({
+        ...prev,
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        phone: currentUser.phone_no || ''
+      }));
+    }
     
     const savedCart = localStorage.getItem('foodCourtCart');
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
-  }, []);
+  }, [router]);
 
   const updateQuantity = (dishId: string, quantity: number) => {
     if (quantity === 0) {
@@ -76,25 +119,108 @@ export default function Checkout() {
     return getTotalPrice() + getDeliveryFee();
   };
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isAuthenticated() || !user) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to place an order',
+        icon: 'warning',
+        confirmButtonColor: '#f97316',
+      });
+      return;
+    }
+
     if (cart.length === 0) {
-      alert('Your cart is empty!');
+      Swal.fire({
+        title: 'Empty Cart',
+        text: 'Your cart is empty!',
+        icon: 'warning',
+        confirmButtonColor: '#f97316',
+      });
       return;
     }
 
     if (!customerInfo.name || !customerInfo.phone) {
-      alert('Please fill in your name and phone number!');
+      Swal.fire({
+        title: 'Missing Information',
+        text: 'Please fill in your name and phone number!',
+        icon: 'warning',
+        confirmButtonColor: '#f97316',
+      });
       return;
     }
 
-    alert(`Order submitted successfully!\n\nOrder Summary:\n${cart.map(item => `${item.quantity}x ${item.name} from ${item.restaurantName}`).join('\n')}\n\nTotal: KSh ${getFinalTotal().toLocaleString()}\nPayment: ${paymentMethod.toUpperCase()}\n\nYour order will be ready in 15-20 minutes!`);
-    
-    setCart([]);
-    localStorage.removeItem('foodCourtCart');
-    
-    router.push('/');
+    setLoading(true);
+
+    try {
+      // Prepare order items for backend
+      const orderItems = cart.map(item => ({
+        menuitem_id: parseInt(item.dishId),
+        quantity: item.quantity,
+        sub_total: item.price * item.quantity
+      }));
+
+      // Create order in backend
+      const orderData = {
+        user_id: user.id,
+        items: orderItems,
+        total_price: getFinalTotal()
+      };
+
+      const { order } = await createCompleteOrder(orderData);
+
+      // Show success message
+      await Swal.fire({
+        title: 'Order Placed Successfully!',
+        html: `
+          <div class="text-left">
+            <p><strong>Order ID:</strong> #${order.id}</p>
+            <p><strong>Total:</strong> KSh ${getFinalTotal().toLocaleString()}</p>
+            <p><strong>Payment Method:</strong> ${paymentMethod.toUpperCase()}</p>
+            <p class="mt-2">Your order will be ready in 15-20 minutes!</p>
+          </div>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#10b981',
+      });
+
+      // Clear cart
+      setCart([]);
+      localStorage.removeItem('foodCourtCart');
+
+      // Ask about table reservation
+      const reservationResult = await Swal.fire({
+        title: 'Table Reservation',
+        text: 'Would you like to reserve a table for dining?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Reserve Table',
+        cancelButtonText: 'No, Thanks',
+        confirmButtonColor: '#f97316',
+        cancelButtonColor: '#6b7280',
+      });
+
+      if (reservationResult.isConfirmed) {
+        // Redirect to reservations page with order ID
+        router.push(`/reservations?orderId=${order.id}`);
+      } else {
+        // Redirect to home page
+        router.push('/');
+      }
+
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Swal.fire({
+        title: 'Order Failed',
+        text: 'Failed to place your order. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#f97316',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (cart.length === 0) {
@@ -117,6 +243,11 @@ export default function Checkout() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Checkout</h1>
         <p className="text-gray-600">Review your order and complete your purchase</p>
+        {user && (
+          <p className="text-sm text-gray-500 mt-2">
+            Ordering as: {user.name} ({user.email})
+          </p>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
@@ -305,9 +436,17 @@ export default function Checkout() {
 
             <button
               type="submit"
-              className="w-full bg-green-500 text-white py-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
+              disabled={loading}
+              className="w-full bg-green-500 text-white py-3 rounded-lg font-medium hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Place Order - KSh {getFinalTotal().toLocaleString()}
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Processing Order...
+                </>
+              ) : (
+                `Place Order - KSh ${getFinalTotal().toLocaleString()}`
+              )}
             </button>
           </form>
         </div>

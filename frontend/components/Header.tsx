@@ -14,55 +14,25 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Header() {
   const pathname = usePathname();
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
+  const { user, isLoggedIn, isOwner, cartCount, loading, logout } = useAuth();
+  
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkAuthState = () => {
-      const storedUserType = localStorage.getItem('userType');
-      const storedUserName = localStorage.getItem('userName');
-      setUserType(storedUserType);
-      setUserName(storedUserName);
-      setIsLoggedIn(!!storedUserType);
-      setIsOwner(storedUserType === 'owner');
-
-      // Only load cart for customers
-      if (storedUserType === 'customer') {
-        const savedCart = localStorage.getItem('foodCourtCart');
-        if (savedCart) {
-          const cart = JSON.parse(savedCart);
-          const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-          setCartCount(totalItems);
-        }
-      }
-
-      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-      setDarkMode(savedDarkMode);
-      if (savedDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-
-    checkAuthState();
-
-    const handleAuthChange = () => checkAuthState();
-    window.addEventListener('authChange', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('authChange', handleAuthChange);
-    };
-  }, [pathname]);
+    // Initialize dark mode from localStorage
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -75,18 +45,14 @@ export default function Header() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('foodCourtCart');
-    setIsLoggedIn(false);
-    setIsOwner(false);
-    setUserType(null);
-    setUserName(null);
-    setCartCount(0);
-    setMobileMenuOpen(false);
-    window.dispatchEvent(new Event('authChange'));
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setMobileMenuOpen(false);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const ownerNavItems = [
@@ -99,20 +65,37 @@ export default function Header() {
     { href: '/', label: 'Home' },
     { href: '/order', label: 'Order' },
     { href: '/reservations', label: 'Reservations' },
-    ...(isLoggedIn
+    ...(isLoggedIn && user
       ? [
-          { href: '#', label: `Hi, ${userName}`, isUserGreeting: true },
-          { href: '/checkout', label: 'Checkout' }
+          { href: '#', label: `Hello, ${user.name}`, isUserGreeting: true as const }
         ]
       : [{ href: '/login', label: 'Login' }])
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
   
-  const isOwnerDashboardPage = pathname.startsWith('/owner-dashboard');
-  const shouldShowOwnerNav = isOwner && isOwnerDashboardPage;
-  const shouldShowCustomerNav = !isOwnerDashboardPage;
-  
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
+                <Utensils className="w-8 h-8 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                NextGen FoodCourt
+              </span>
+            </Link>
+            <div className="flex items-center space-x-4">
+              <div className="animate-pulse bg-gray-300 dark:bg-gray-600 h-8 w-20 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
@@ -132,7 +115,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <div key={item.href}>
-                {item.isUserGreeting ? (
+                {'isUserGreeting' in item && item.isUserGreeting ? (
                   <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
                     {item.label}
                   </span>
@@ -218,7 +201,7 @@ export default function Header() {
             <div className="flex flex-col space-y-4">
               {navItems.map((item) => (
                 <div key={item.href}>
-                  {item.isUserGreeting ? (
+                  {'isUserGreeting' in item && item.isUserGreeting ? (
                     <span className="block px-4 py-2 text-lg font-semibold text-gray-700 dark:text-gray-300">
                       {item.label}
                     </span>

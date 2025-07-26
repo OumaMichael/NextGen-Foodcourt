@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { restaurants } from '@/lib/data';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import { 
+  fetchOutlets, 
+  fetchMenuItemsByOutlet, 
+  isAuthenticated, 
+  getCurrentUser 
+} from '@/lib/api';
 
 interface OrderItem {
   dishId: string;
@@ -10,54 +16,157 @@ interface OrderItem {
   price: number;
   quantity: number;
   notes: string;
+  outletName: string;
+}
+
+interface Outlet {
+  id: number;
+  name: string;
+  description: string;
+  img_url: string;
+  cuisine_id: number;
+}
+
+interface MenuItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  outlet_id: number;
 }
 
 export default function Order() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const outletId = searchParams.get('outlet'); 
   
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [selectedOutlet, setSelectedOutlet] = useState(outletId || '');
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const selectedRestaurant = restaurants.find(r => r.id === selectedOutlet);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('userType');
+  // Check authentication on component mount
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to place an order',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
+        router.push('/login');
+      });
+      return;
+    }
 
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    loadOutlets();
+  }, [router]);
 
-  const filteredDishes = selectedRestaurant?.dishes.filter(dish =>
-    dish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dish.description.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Load outlets from backend
+  const loadOutlets = async () => {
+    try {
+      const outletsData = await fetchOutlets();
+      setOutlets(outletsData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading outlets:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load restaurants. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#f97316',
+      });
+      setLoading(false);
+    }
+  };
+
+  // Load menu items when outlet is selected
+  useEffect(() => {
+    if (selectedOutlet) {
+      loadMenuItems(selectedOutlet);
+    } else {
+      setMenuItems([]);
+    }
+  }, [selectedOutlet]);
+
+  const loadMenuItems = async (outletId: string) => {
+    try {
+      const items = await fetchMenuItemsByOutlet(outletId);
+      setMenuItems(items);
+    } catch (error) {
+      console.error('Error loading menu items:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load menu items. Please try again.',
+        icon: 'error',
+        confirmButtonColor: '#f97316',
+      });
+    }
+  };
+
+  const selectedOutletData = outlets.find(o => o.id.toString() === selectedOutlet);
+
+  const filteredDishes = menuItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const addToOrder = (dishId: string, name: string, price: number) => {
+    if (!isAuthenticated()) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to add items to your order',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
+        router.push('/login');
+      });
+      return;
+    }
+
     const existingItem = orderItems.find(item => item.dishId === dishId);
     
     if (existingItem) {
- 
       setOrderItems(orderItems.map(item =>
         item.dishId === dishId 
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
-     
       setOrderItems([...orderItems, {
         dishId,
         name,
         price,
         quantity: 1,
-        notes: ''
+        notes: '',
+        outletName: selectedOutletData?.name || ''
       }]);
     }
+
+    // Show success message
+    Swal.fire({
+      title: 'Added to Order!',
+      text: `${name} has been added to your order`,
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
   };
 
   const updateQuantity = (dishId: string, quantity: number) => {
     if (quantity === 0) {
-      
       setOrderItems(orderItems.filter(item => item.dishId !== dishId));
     } else {
-      
       setOrderItems(orderItems.map(item =>
         item.dishId === dishId 
           ? { ...item, quantity }
@@ -79,16 +188,52 @@ export default function Order() {
   };
 
   const handleCheckout = () => {
-    if (orderItems.length === 0) {
-      alert('Please add items to your order first!');
+    if (!isAuthenticated()) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to proceed with checkout',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
+        router.push('/login');
+      });
       return;
     }
-    alert(`Order submitted! Total: KSh ${getTotalPrice().toLocaleString()}.`);
+
+    if (orderItems.length === 0) {
+      Swal.fire({
+        title: 'Empty Cart',
+        text: 'Please add items to your order first!',
+        icon: 'warning',
+        confirmButtonColor: '#f97316',
+      });
+      return;
+    }
+
+    // Save cart to localStorage for checkout page
+    localStorage.setItem('foodCourtCart', JSON.stringify(orderItems.map(item => ({
+      dishId: item.dishId,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      restaurantName: item.outletName,
+      notes: item.notes
+    }))));
+
+    router.push('/checkout');
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      
       <div className="mb-8">
         <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-6">
           Place Your Order
@@ -96,12 +241,15 @@ export default function Order() {
         <p className="text-gray-600">
           Select a restaurant and add dishes to your order
         </p>
+        {user && (
+          <p className="text-sm text-dark -500 mt-2">
+            Welcome back, {user.name}!
+          </p>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-       
         <div className="lg:col-span-2">
-          
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Restaurant
@@ -112,15 +260,15 @@ export default function Order() {
               className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               <option value="">Choose a restaurant...</option>
-              {restaurants.map((restaurant) => (
-                <option key={restaurant.id} value={restaurant.id}>
-                  {restaurant.name} - {restaurant.cuisine}
+              {outlets.map((outlet) => (
+                <option key={outlet.id} value={outlet.id}>
+                  {outlet.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {selectedRestaurant && (
+          {selectedOutletData && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Search Dishes
@@ -135,13 +283,13 @@ export default function Order() {
             </div>
           )}
 
-          {selectedRestaurant && (
+          {selectedOutletData && (
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-                {selectedRestaurant.name}
+                {selectedOutletData.name}
               </h2>
               <p className="text-gray-600 mb-6">
-                {selectedRestaurant.description}
+                {selectedOutletData.description}
               </p>
 
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Menu</h3>
@@ -152,12 +300,13 @@ export default function Order() {
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800">{dish.name}</h4>
                       <p className="text-sm text-gray-600">{dish.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Category: {dish.category}</p>
                       <p className="text-lg font-semibold text-green-600 mt-1">
                         KSh {dish.price.toLocaleString()}
                       </p>
                     </div>
                     <button
-                      onClick={() => addToOrder(dish.id, dish.name, dish.price)}
+                      onClick={() => addToOrder(dish.id.toString(), dish.name, dish.price)}
                       className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
                       Add to Order
@@ -168,6 +317,12 @@ export default function Order() {
                 {filteredDishes.length === 0 && searchTerm && (
                   <div className="text-center py-8">
                     <p className="text-gray-500 text-lg">No dishes found matching "{searchTerm}"</p>
+                  </div>
+                )}
+
+                {filteredDishes.length === 0 && !searchTerm && menuItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-lg">No menu items available for this restaurant</p>
                   </div>
                 )}
               </div>
