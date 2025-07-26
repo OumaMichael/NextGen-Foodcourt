@@ -49,7 +49,6 @@ export default function Order() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
-  // Check authentication on component mount
   useEffect(() => {
     if (!isAuthenticated()) {
       Swal.fire({
@@ -69,7 +68,6 @@ export default function Order() {
     loadOutlets();
   }, [router]);
 
-  // Load outlets from backend
   const loadOutlets = async () => {
     try {
       const outletsData = await fetchOutlets();
@@ -87,7 +85,6 @@ export default function Order() {
     }
   };
 
-  // Load menu items when outlet is selected
   useEffect(() => {
     if (selectedOutlet) {
       loadMenuItems(selectedOutlet);
@@ -151,7 +148,6 @@ export default function Order() {
       }]);
     }
 
-    // Show success message
     Swal.fire({
       title: 'Added to Order!',
       text: `${name} has been added to your order`,
@@ -211,7 +207,6 @@ export default function Order() {
       return;
     }
 
-    // Save cart to localStorage for checkout page
     localStorage.setItem('foodCourtCart', JSON.stringify(orderItems.map(item => ({
       dishId: item.dishId,
       name: item.name,

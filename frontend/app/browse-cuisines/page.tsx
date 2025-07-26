@@ -140,7 +140,6 @@ export default function BrowseCuisines() {
           </select>
         </div>
 
-        {/* Cuisine Cards with Images */}
         {!selectedCuisine && (
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Popular Cuisines</h2>
