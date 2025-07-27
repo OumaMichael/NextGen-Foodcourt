@@ -23,7 +23,7 @@ export default function OwnerAnalytics() {
   });
   const [loading, setLoading] = useState(true);
 
-  const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'admin';
+  const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
   // ✨ HIGHLIGHTED useEffect - Fetches analytics data from backend
   useEffect(() => {
@@ -106,13 +106,13 @@ export default function OwnerAnalytics() {
       <div className="text-center py-12">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Access Denied</h1>
         <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-          You need to be logged in as an admin to access this page
+          You need to be logged in as an owner to access this page
         </p>
         <a
           href="/login"
           className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
         >
-          Login as Admin
+          Login as Owner
         </a>
       </div>
     );

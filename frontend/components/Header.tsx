@@ -14,12 +14,14 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/contexts/AuthContext'; // Adjust the import path as necessary
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isLoggedIn, isOwner, cartCount, loading, logout } = useAuth();
-  
+  const { user, isLoggedIn, cart, loading, logout } = useAuth();
+  const isOwner = user?.role === 'owner';
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 

@@ -27,7 +27,7 @@ export default function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'admin';
+  const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -122,7 +122,7 @@ export default function OrderManagement() {
       <div className="text-center py-12">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Access Denied</h1>
         <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-          You need to be logged in as an admin to access this page
+          You need to be logged in as an owner to access this page
         </p>
       </div>
     );

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/contexts/AuthContext';
 import { fetchTables, fetchReservations, createReservation, deleteReservation, getCartItems } from '@/lib/api';
 
 interface Table {

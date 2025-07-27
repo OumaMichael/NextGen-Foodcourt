@@ -1,133 +1,218 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { restaurants, tables, owners } from '@/lib/data';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 
 export default function OwnerDashboard() {
-  const [selectedOwnerId] = useState('1'); 
+  const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
+  const [outlets, setOutlets] = useState([]);
+  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [showAddOutlet, setShowAddOutlet] = useState(false);
+  const [newOutlet, setNewOutlet] = useState({
+    name: '',
+    contact: '',
+    description: '',
+    cuisine_id: 1
+  });
+  const [cuisines, setCuisines] = useState([]);
   
-  const owner = owners.find(o => o.id === selectedOwnerId);
-  const restaurant = restaurants.find(r => r.id === owner?.restaurantId);
-  // const ownerTables = tables.filter(t => t.ownerId === selectedOwnerId);
-  const popularDishes = restaurant?.dishes.filter(d => d.isPopular) || [];
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== 'owner') {
+      router.push('/login');
+      return;
+    }
+    
+    fetchData();
+  }, [isLoggedIn, user, router]);
+  
+  const fetchData = async () => {
+    try {
+      const [outletsRes, cuisinesRes] = await Promise.all([
+        fetch('http://localhost:5555/outlets'),
+        fetch('http://localhost:5555/cuisines')
+      ]);
+      
+      const outletsData = await outletsRes.json();
+      const cuisinesData = await cuisinesRes.json();
+      
+      // Filter outlets owned by current user
+      const userOutlets = outletsData.filter((outlet: any) => outlet.owner_id === parseInt(user?.id || '0'));
+      
+      setOutlets(userOutlets);
+      setCuisines(cuisinesData);
+      
+      if (userOutlets.length > 0) {
+        setSelectedOutlet(userOutlets[0].id.toString());
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    }
+  };
+  
+  const handleAddOutlet = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://localhost:5555/outlets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newOutlet,
+          owner_id: user?.id,
+          img_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'
+        })
+      });
+      
+      if (response.ok) {
+        fetchData();
+        setShowAddOutlet(false);
+        setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1 });
+      }
+    } catch (error) {
+      console.error('Failed to add outlet:', error);
+    }
+  };
 
-  if (!owner || !restaurant) {
-    return <div>Owner not found</div>;
+  if (!isLoggedIn || user?.role !== 'owner') {
+    return (
+      <div className="text-center py-12">
+        <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-6">Access Denied</h1>
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+          You need to be logged in as an outlet owner to access this page
+        </p>
+      </div>
+    );
   }
 
+  const selectedOutletData = outlets.find((outlet: any) => outlet.id.toString() === selectedOutlet);
   return (
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          Welcome back, {owner.name}
+          Welcome back, {user?.name}
         </h1>
-        <p className="text-gray-600">
-          Managing {restaurant.name} - {restaurant.cuisine} Cuisine
-        </p>
+        {selectedOutletData ? (
+          <p className="text-gray-600">
+            Managing {selectedOutletData.name} - {selectedOutletData.cuisine?.name} Cuisine
+          </p>
+        ) : (
+          <p className="text-gray-600">No outlets found. Add your first outlet below.</p>
+        )}
       </div>
 
+      {/* Outlet Selection */}
+      <div className="mb-8 bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Your Outlets</h2>
+          <button
+            onClick={() => setShowAddOutlet(true)}
+            className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Outlet
+          </button>
+        </div>
+        
+        {outlets.length > 0 ? (
+          <select
+            value={selectedOutlet}
+            onChange={(e) => setSelectedOutlet(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          >
+            {outlets.map((outlet: any) => (
+              <option key={outlet.id} value={outlet.id}>
+                {outlet.name} - {outlet.cuisine?.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-gray-500">No outlets registered yet.</p>
+        )}
+      </div>
+      
+      {/* Add Outlet Form */}
+      {showAddOutlet && (
+        <div className="mb-8 bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Outlet</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Outlet Name"
+              value={newOutlet.name}
+              onChange={(e) => setNewOutlet({ ...newOutlet, name: e.target.value })}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              placeholder="Contact Number"
+              value={newOutlet.contact}
+              onChange={(e) => setNewOutlet({ ...newOutlet, contact: e.target.value })}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            />
+            <select
+              value={newOutlet.cuisine_id}
+              onChange={(e) => setNewOutlet({ ...newOutlet, cuisine_id: parseInt(e.target.value) })}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              {cuisines.map((cuisine: any) => (
+                <option key={cuisine.id} value={cuisine.id}>{cuisine.name}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            placeholder="Description"
+            value={newOutlet.description}
+            onChange={(e) => setNewOutlet({ ...newOutlet, description: e.target.value })}
+            className="w-full mt-4 px-4 py-2 border border-gray-300 rounded-lg"
+            rows={3}
+          />
+          <div className="flex gap-4 mt-4">
+            <button
+              onClick={handleAddOutlet}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+            >
+              Add Outlet
+            </button>
+            <button
+              onClick={() => setShowAddOutlet(false)}
+              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Total Revenue</h3>
           <p className="text-3xl font-bold text-green-600">
-            {/* KSh {owner.totalRevenue.toLocaleString()} */}
+            KSh 0
           </p>
           <p className="text-sm text-gray-500 mt-1">This month</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Tables</h3>
-          {/* <p className="text-3xl font-bold text-blue-600">{ownerTables.length}</p> */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Orders Today</h3>
+          <p className="text-3xl font-bold text-blue-600">0</p>
           <p className="text-sm text-gray-500 mt-1">
-            {/* {ownerTables.filter(t => t.status === 'available').length} available */}
+            Pending orders
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Popular Dishes</h3>
-          <p className="text-3xl font-bold text-amber-600">{popularDishes.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Top performing items</p>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4"
-          >Tables</h2>
-          {/* <div className="grid grid-cols-4 gap-3">
-            {ownerTables.map((table) => (
-              <div
-                key={table.id}
-                className={`aspect-square rounded-lg border-2 flex items-center justify-center text-sm font-medium ${
-                  table.status === 'available'
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-400 border-gray-300'
-                }`}
-              >
-                T{table.number}
-              </div>
-            ))}
-          </div> */}
-          <div className="mt-4 flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-black rounded"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
-              <span>Reserved</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Popular Dishes</h2>
-          <div className="space-y-4">
-            {popularDishes.map((dish) => (
-              <div key={dish.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <h4 className="font-medium text-gray-800">{dish.name}</h4>
-                  <p className="text-sm text-gray-600">{dish.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-green-600">
-                    KSh {dish.price.toLocaleString()}
-                  </p>
-                  <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                    Popular
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Menu Items</h3>
+          <p className="text-3xl font-bold text-amber-600">0</p>
+          <p className="text-sm text-gray-500 mt-1">Available dishes</p>
         </div>
       </div>
 
       <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Menu</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {restaurant.dishes.map((dish) => (
-            <div key={dish.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-gray-800">{dish.name}</h4>
-                {dish.isPopular && (
-                  <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                    Popular
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-gray-600 mb-2">{dish.description}</p>
-              <p className="font-semibold text-green-600">
-                KSh {dish.price.toLocaleString()}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-       <div className="mt-8 bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
         <div className="grid md:grid-cols-4 gap-4">
           <Link href="/owner-dashboard/menu" className="bg-orange-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block">
