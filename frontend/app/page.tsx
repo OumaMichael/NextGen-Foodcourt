@@ -1,9 +1,13 @@
- 'use client';
+'use client';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const { isLoggedIn, isLoading } = useAuth();
+  const router = useRouter();
   const [restaurants, setRestaurants] = useState([]);
   const [cuisines, setCuisines] = useState([]);
 
@@ -14,6 +18,22 @@ export default function Home() {
       return actualUrl ? decodeURIComponent(actualUrl) : rawUrl;
     } catch {
       return rawUrl;
+    }
+  };
+
+  const handleOrderNowClick = () => {
+    if (isLoggedIn) {
+      router.push('/order');
+    } else {
+      router.push('/login');
+    }
+  };
+
+  const handleReserveClick = () => {
+    if (isLoggedIn) {
+      router.push('/reservations');
+    } else {
+      router.push('/login');
     }
   };
 
@@ -59,6 +79,47 @@ export default function Home() {
               Reserve your table in advance and order from your favorite outlets
               while enjoying our comfortable shared seating experience.
             </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={handleOrderNowClick}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    🍽️ Order Now
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={handleReserveClick}
+                disabled={isLoading}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    🪑 Reserve Table
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {!isLoggedIn && !isLoading && (
+              <p className="mt-4 text-lg text-yellow-200 bg-black/30 rounded-lg px-4 py-2 inline-block">
+                💡 Please log in to place orders and make reservations
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -78,6 +139,12 @@ export default function Home() {
             <Link
               key={restaurant.id}
               href={`/order?outlet=${restaurant.id}`}
+              onClick={(e) => {
+                if (!isLoggedIn) {
+                  e.preventDefault();
+                  router.push('/login');
+                }
+              }}
               className="no-underline bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer flex flex-col h-22"
             >
               <div
@@ -93,8 +160,8 @@ export default function Home() {
                   {restaurant.cuisine.name} Cuisine
                 </p>
                 </div>
-                <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300">
-                  Order Now
+                <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex items-center justify-center gap-2">
+                  {isLoggedIn ? '🍽️ Order Now' : '🔒 Login to Order'}
                 </button>
               </div>
             </Link>
@@ -169,14 +236,20 @@ export default function Home() {
 
         <Link
           href="/reservations"
+          onClick={(e) => {
+            if (!isLoggedIn) {
+              e.preventDefault();
+              router.push('/login');
+            }
+          }}
           className="no-underline bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-center flex flex-col justify-between h-48"
         >
           <div>
           <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">Reserve Table</h3>
           <p className="text-lg text-gray-600 dark:text-gray-300">Book your spot in advance</p>
           </div>
-          <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300">
-            Reserve Now
+          <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex items-center justify-center gap-2">
+            {isLoggedIn ? '🪑 Reserve Now' : '🔒 Login to Reserve'}
           </button>
         </Link>
 

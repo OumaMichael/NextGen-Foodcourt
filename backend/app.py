@@ -418,15 +418,13 @@ class ReservationLists(Resource):
 
     def post(self):
         data = request.get_json()
-
-        table = db.session.get(Table, data['table_id'])
-        if not table:
-            return {"error": "Table not found"}, 404
-
-        if table.is_available != 'Yes':
-            return {"error": "Table is not available"}, 400
-
         try:
+            table = Table.query.get(data['table_id'])
+            if not table:
+                return {"error": "Table not found"}, 404
+            if table.is_available != 'Yes':
+                return {"error": "Table is not available"}, 400
+
             reservation = Reservation(
                 user_id=data['user_id'],
                 table_id=data['table_id'],
@@ -435,16 +433,14 @@ class ReservationLists(Resource):
                 status=data.get('status', 'Confirmed'),
                 no_of_people=data.get('no_of_people', 1)
             )
-            table.is_available = 'No' 
-
             db.session.add(reservation)
+            table.is_available = 'No'
             db.session.commit()
             return reservation.to_dict(rules=('-user', '-table', '-order')), 201
-
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 500
-        
+
 class ReservationDetails(Resource):
     def get(self, id):
         reservation = Reservation.query.get(id)
@@ -455,28 +451,22 @@ class ReservationDetails(Resource):
     def patch(self, id):
         data = request.get_json()
         reservation = Reservation.query.get(id)
-
         if not reservation:
             return {"error": "Reservation not found"}, 404
-
         try:
             if 'user_id' in data:
                 reservation.user_id = data['user_id']
-
             if 'table_id' in data and data['table_id'] != reservation.table_id:
                 new_table = Table.query.get(data['table_id'])
                 if not new_table:
                     return {"error": "New table not found"}, 404
                 if new_table.is_available != 'Yes':
                     return {"error": "New table is not available"}, 400
-
                 old_table = Table.query.get(reservation.table_id)
                 if old_table:
                     old_table.is_available = 'Yes'
-
                 reservation.table_id = new_table.id
                 new_table.is_available = 'No'
-
             if 'booking_date' in data:
                 reservation.booking_date = datetime.strptime(data['booking_date'], "%Y-%m-%d").date()
             if 'booking_time' in data:
@@ -485,31 +475,23 @@ class ReservationDetails(Resource):
                 reservation.status = data['status']
             if 'no_of_people' in data:
                 reservation.no_of_people = data['no_of_people']
-
             db.session.commit()
             return reservation.to_dict(rules=('-user', '-table', '-order')), 200
-
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 500
 
-
-        
     def delete(self, id):
         reservation = Reservation.query.get(id)
         if not reservation:
             return {"error": "Reservation not found"}, 404
-
         try:
-          
-            reservation.status = 'cancelled'
-            
             table = reservation.table
-            table.is_available = 'Yes'
-
+            db.session.delete(reservation)
+            if table:
+                table.is_available = 'Yes'
             db.session.commit()
-            return {"message": "Reservation cancelled successfully"}, 200
-
+            return {"message": "Reservation deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 500
