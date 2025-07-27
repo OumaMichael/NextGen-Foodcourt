@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Users, Clock, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Users, Clock, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Reservation {
   id: number;
   user_id: number;
   table_id: number;
-  reservation_date: string;
-  reservation_time: string;
+  booking_date: string;
+  booking_time: string;
   status: string;
-  party_size: number;
+  no_of_people: number;
   created_at: string;
   user?: {
     name: string;
@@ -27,6 +27,17 @@ interface Table {
   table_number: number;
   capacity: number;
   status: string;
+  is_available?: string;
+}
+
+interface FormErrors {
+  customerName?: string;
+  customerEmail?: string;
+  table_id?: string;
+  booking_date?: string;
+  booking_time?: string;
+  no_of_people?: string;
+  general?: string;
 }
 
 export default function ReservationManagement() {
@@ -34,18 +45,29 @@ export default function ReservationManagement() {
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
+  
   const [newReservation, setNewReservation] = useState({
     customerName: '',
     customerEmail: '',
     table_id: 1,
-    reservation_date: '',
-    reservation_time: '',
-    party_size: 2
+    booking_date: '',
+    booking_time: '',
+    no_of_people: 2
   });
 
   const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
-  // ✨ HIGHLIGHTED useEffect - Fetches reservation data from backend
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
   useEffect(() => {
     const fetchReservationData = async () => {
       try {
@@ -66,9 +88,9 @@ export default function ReservationManagement() {
         // Set mock data on error
         setReservations([]);
         setTables([
-          { id: 1, table_number: 1, capacity: 4, status: 'available' },
-          { id: 2, table_number: 2, capacity: 6, status: 'available' },
-          { id: 3, table_number: 3, capacity: 4, status: 'reserved' },
+          { id: 1, table_number: 1, capacity: 4, status: 'available', is_available: 'Yes' },
+          { id: 2, table_number: 2, capacity: 6, status: 'available', is_available: 'Yes' },
+          { id: 3, table_number: 3, capacity: 4, status: 'reserved', is_available: 'No' },
         ]);
       } finally {
         setLoading(false);
@@ -80,15 +102,84 @@ export default function ReservationManagement() {
     }
   }, [isOwner]);
 
+  // Form validation
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!newReservation.customerName.trim()) {
+      newErrors.customerName = 'Customer name is required';
+    }
+
+    if (!newReservation.customerEmail.trim()) {
+      newErrors.customerEmail = 'Customer email is required';
+    } else if (!/\S+@\S+\.\S+/.test(newReservation.customerEmail)) {
+      newErrors.customerEmail = 'Please enter a valid email address';
+    }
+
+    if (!newReservation.booking_date) {
+      newErrors.booking_date = 'Booking date is required';
+    } else {
+      const selectedDate = new Date(newReservation.booking_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        newErrors.booking_date = 'Booking date cannot be in the past';
+      }
+    }
+
+    if (!newReservation.booking_time) {
+      newErrors.booking_time = 'Booking time is required';
+    }
+
+    if (!newReservation.table_id) {
+      newErrors.table_id = 'Please select a table';
+    }
+
+    if (newReservation.no_of_people < 1 || newReservation.no_of_people > 12) {
+      newErrors.no_of_people = 'Number of people must be between 1 and 12';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const formatBookingDate = (dateString: string): string => {
+    // Input is already in YYYY-MM-DD format from date input
+    return dateString;
+  };
+
+  const formatBookingTime = (timeString: string): string => {
+    // Convert HH:MM to HH:MM:SS format
+    if (timeString.includes(':')) {
+      const parts = timeString.split(':');
+      if (parts.length === 2) {
+        return `${timeString}:00`;
+      }
+    }
+    return timeString;
+  };
+
   const handleAddReservation = async () => {
+    // Clear previous errors and messages
+    setErrors({});
+    setSuccessMessage('');
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setSubmitting(true);
+
     try {
       // First create a user (simplified for demo)
       const userResponse = await fetch('http://localhost:5555/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: newReservation.customerName,
-          email: newReservation.customerEmail,
+          name: newReservation.customerName.trim(),
+          email: newReservation.customerEmail.trim(),
           password: 'temppass123',
           phone_no: '0700000000',
           role: 'customer'
@@ -101,35 +192,65 @@ export default function ReservationManagement() {
         userId = userData.id;
       }
 
-      // Then create the reservation
+      // Format the date and time properly
+      const formattedDate = formatBookingDate(newReservation.booking_date);
+      const formattedTime = formatBookingTime(newReservation.booking_time);
+
+      // Create the reservation with properly formatted data
       const reservationResponse = await fetch('http://localhost:5555/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: userId,
-          table_id: newReservation.table_id,
-          reservation_date: newReservation.reservation_date,
-          reservation_time: newReservation.reservation_time,
-          party_size: newReservation.party_size,
-          status: 'confirmed'
+        user_id: Number(userId),
+        table_id: Number(newReservation.table_id),
+        booking_date: formattedDate,
+        booking_time: formattedTime,
+        no_of_people: Number(newReservation.no_of_people) || 1,
+        status: 'Confirmed' // Default status'
         })
       });
 
       if (reservationResponse.ok) {
         const addedReservation = await reservationResponse.json();
-        setReservations([...reservations, addedReservation]);
+        
+        // Reset form
         setNewReservation({
           customerName: '',
           customerEmail: '',
           table_id: 1,
-          reservation_date: '',
-          reservation_time: '',
-          party_size: 2
+          booking_date: '',
+          booking_time: '',
+          no_of_people: 2
         });
+        
         setShowAddForm(false);
+        setSuccessMessage('Reservation created successfully!');
+        
+        // Refresh the data to get updated information
+        const [reservationsRes, tablesRes] = await Promise.all([
+          fetch('http://localhost:5555/reservations'),
+          fetch('http://localhost:5555/tables')
+        ]);
+        
+        if (reservationsRes.ok && tablesRes.ok) {
+          const reservationsData = await reservationsRes.json();
+          const tablesData = await tablesRes.json();
+          setReservations(reservationsData);
+          setTables(tablesData);
+        }
+      } else {
+        const errorData = await reservationResponse.json();
+        setErrors({ 
+          general: errorData.error || 'Failed to create reservation. Please try again.' 
+        });
       }
     } catch (error) {
       console.error('Failed to add reservation:', error);
+      setErrors({ 
+        general: 'Network error. Please check your connection and try again.' 
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -142,11 +263,36 @@ export default function ReservationManagement() {
 
         if (response.ok) {
           setReservations(reservations.filter(reservation => reservation.id !== id));
+          setSuccessMessage('Reservation deleted successfully!');
+          
+          // Refresh tables to update availability status
+          const tablesRes = await fetch('http://localhost:5555/tables');
+          if (tablesRes.ok) {
+            const tablesData = await tablesRes.json();
+            setTables(tablesData);
+          }
+        } else {
+          setErrors({ general: 'Failed to delete reservation. Please try again.' });
         }
       } catch (error) {
         console.error('Failed to delete reservation:', error);
+        setErrors({ general: 'Network error. Please try again.' });
       }
     }
+  };
+
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setErrors({});
+    setSuccessMessage('');
+    setNewReservation({
+      customerName: '',
+      customerEmail: '',
+      table_id: 1,
+      booking_date: '',
+      booking_time: '',
+      no_of_people: 2
+    });
   };
 
   if (!isOwner) {
@@ -167,6 +313,11 @@ export default function ReservationManagement() {
       </div>
     );
   }
+
+  // Filter available tables (supporting both status formats)
+  const availableTables = tables.filter(table => 
+    table.status === 'available' || table.is_available === 'Yes'
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -189,80 +340,157 @@ export default function ReservationManagement() {
           </button>
         </div>
 
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <span className="text-green-800 dark:text-green-200">{successMessage}</span>
+          </div>
+        )}
+
+        {/* General Error Message */}
+        {errors.general && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <span className="text-red-800 dark:text-red-200">{errors.general}</span>
+          </div>
+        )}
+
         {/* Add New Reservation Form */}
         {showAddForm && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Reserve Table for Customer</h3>
+            
             <div className="grid md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Customer Name"
-                value={newReservation.customerName}
-                onChange={(e) => setNewReservation({ ...newReservation, customerName: e.target.value })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <input
-                type="email"
-                placeholder="Customer Email"
-                value={newReservation.customerEmail}
-                onChange={(e) => setNewReservation({ ...newReservation, customerEmail: e.target.value })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <select
-                value={newReservation.table_id}
-                onChange={(e) => setNewReservation({ ...newReservation, table_id: Number(e.target.value) })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {tables.filter(table => table.status === 'available').map(table => (
-                  <option key={table.id} value={table.id}>
-                    Table {table.table_number} (Capacity: {table.capacity})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                placeholder="Party Size"
-                min="1"
-                max="8"
-                value={newReservation.party_size}
-                onChange={(e) => setNewReservation({ ...newReservation, party_size: Number(e.target.value) })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <input
-                type="date"
-                value={newReservation.reservation_date}
-                onChange={(e) => setNewReservation({ ...newReservation, reservation_date: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <select
-                value={newReservation.reservation_time}
-                onChange={(e) => setNewReservation({ ...newReservation, reservation_time: e.target.value })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">Select Time</option>
-                <option value="11:00">11:00 AM</option>
-                <option value="12:00">12:00 PM</option>
-                <option value="13:00">1:00 PM</option>
-                <option value="14:00">2:00 PM</option>
-                <option value="15:00">3:00 PM</option>
-                <option value="16:00">4:00 PM</option>
-                <option value="17:00">5:00 PM</option>
-                <option value="18:00">6:00 PM</option>
-                <option value="19:00">7:00 PM</option>
-                <option value="20:00">8:00 PM</option>
-              </select>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Customer Name"
+                  value={newReservation.customerName}
+                  onChange={(e) => setNewReservation({ ...newReservation, customerName: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.customerName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.customerName && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customerName}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                  type="email"
+                  placeholder="Customer Email"
+                  value={newReservation.customerEmail}
+                  onChange={(e) => setNewReservation({ ...newReservation, customerEmail: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.customerEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.customerEmail && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customerEmail}</p>
+                )}
+              </div>
+
+              <div>
+                <select
+                  value={newReservation.table_id}
+                  onChange={(e) => setNewReservation({ ...newReservation, table_id: Number(e.target.value) })}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.table_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  <option value="">Select Table</option>
+                  {availableTables.map(table => (
+                    <option key={table.id} value={table.id}>
+                      Table {table.table_number} (Capacity: {table.capacity})
+                    </option>
+                  ))}
+                </select>
+                {errors.table_id && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.table_id}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                  type="number"
+                  placeholder="Number of People"
+                  min="1"
+                  max="12"
+                  value={newReservation.no_of_people}
+                  onChange={(e) => setNewReservation({ ...newReservation, no_of_people: Number(e.target.value) })}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.no_of_people ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.no_of_people && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.no_of_people}</p>
+                )}
+              </div>
+
+              <div>
+                <input
+                  type="date"
+                  value={newReservation.booking_date}
+                  onChange={(e) => setNewReservation({ ...newReservation, booking_date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.booking_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {errors.booking_date && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.booking_date}</p>
+                )}
+              </div>
+
+              <div>
+                <select
+                  value={newReservation.booking_time}
+                  onChange={(e) => setNewReservation({ ...newReservation, booking_time: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.booking_time ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  <option value="">Select Time</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                  <option value="17:00">5:00 PM</option>
+                  <option value="18:00">6:00 PM</option>
+                  <option value="19:00">7:00 PM</option>
+                  <option value="20:00">8:00 PM</option>
+                  <option value="21:00">9:00 PM</option>
+                  <option value="22:00">10:00 PM</option>
+                </select>
+                {errors.booking_time && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.booking_time}</p>
+                )}
+              </div>
             </div>
-            <div className="flex gap-4 mt-4">
+            
+            <div className="flex gap-4 mt-6">
               <button
                 onClick={handleAddReservation}
-                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                disabled={submitting}
+                className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Create Reservation
+                {submitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Reservation'
+                )}
               </button>
               <button
-                onClick={() => setShowAddForm(false)}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                onClick={handleCancelForm}
+                disabled={submitting}
+                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -295,24 +523,33 @@ export default function ReservationManagement() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        <span>{reservation.reservation_date}</span>
+                        <span>{reservation.booking_date || 'Date not set'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        <span>{reservation.reservation_time}</span>
+                        <span>{reservation.booking_time || 'Time not set'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
-                        <span>Table {reservation.table?.table_number} - {reservation.party_size} guests</span>
+                        <span>
+                          Table {reservation.table?.table_number || 'Unknown'} - {reservation.no_of_people || 0} guests
+                        </span>
                       </div>
                     </div>
+                    {reservation.user?.email && (
+                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        Email: {reservation.user.email}
+                      </div>
+                    )}
                     <div className="mt-3">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        reservation.status === 'confirmed' 
+                        reservation.status === 'Confirmed' 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                          : reservation.status === 'Pending'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                       }`}>
-                        {reservation.status}
+                        {reservation.status || 'Unknown Status'}
                       </span>
                     </div>
                   </div>
@@ -320,6 +557,7 @@ export default function ReservationManagement() {
                     <button
                       onClick={() => handleDeleteReservation(reservation.id)}
                       className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="Delete Reservation"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
