@@ -5,41 +5,37 @@ import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { loginUser } from '@/lib/api';
 
 
 
 export default function Login() {
-const router = useRouter();
-
+  const router = useRouter();
+  const { login } = useAuth();
   
-const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const { email, password } = formData;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { email, password } = formData;
 
-  if (!email || !password) {
-    return toast.error("Please enter both email and password.");
-  }
+    if (!email || !password) {
+      return toast.error("Please enter both email and password.");
+    }
 
-  try {
-    const res = await fetch("http://localhost:5555/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email, password }),
-    });
+    setIsLoading(true);
 
-    const data = await res.json();
-    console.log(data)
-
-    if (res.ok) {
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
+    try {
+      const data = await loginUser(email, password);
+      
+      // Use the auth context login method
+      login(data.user, data.access_token);
+      
       toast.success("Login successful!");
 
       setTimeout(() => {
@@ -49,13 +45,12 @@ const handleSubmit = async (e: React.FormEvent) => {
           router.push('/');
         }
       }, 1500);
-    } else {
-      toast.error(data.message || "Login failed. Please try again.");
+    } catch (error: any) {
+      toast.error(error.message || "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    toast.error("Server error. Please try again later.");
-  }
-};
+  };
 
 
   return (
@@ -115,9 +110,10 @@ const handleSubmit = async (e: React.FormEvent) => {
 
           <button
             type="submit"
-            className="w-full bg-amber-500 text-white py-2 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors"
+            disabled={isLoading}
+            className="w-full bg-amber-500 text-white py-2 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>   
 

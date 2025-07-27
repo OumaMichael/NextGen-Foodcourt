@@ -14,15 +14,12 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Header() {
   const pathname = usePathname();
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
+  const { user, isLoggedIn, isOwner, cartCount, loading, logout } = useAuth();
+  
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -75,18 +72,14 @@ export default function Header() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('foodCourtCart');
-    setIsLoggedIn(false);
-    setIsOwner(false);
-    setUserType(null);
-    setUserName(null);
-    setCartCount(0);
-    setMobileMenuOpen(false);
-    window.dispatchEvent(new Event('authChange'));
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setMobileMenuOpen(false);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const ownerNavItems = [
@@ -99,10 +92,9 @@ export default function Header() {
     { href: '/', label: 'Home' },
     { href: '/order', label: 'Order' },
     { href: '/reservations', label: 'Reservations' },
-    ...(isLoggedIn
+    ...(isLoggedIn && user
       ? [
-          { href: '#', label: `Hi, ${userName}`, isUserGreeting: true },
-          { href: '/checkout', label: 'Checkout' }
+          { href: '#', label: `Hello, ${user.name}`, isUserGreeting: true as const }
         ]
       : [{ href: '/login', label: 'Login' }])
   ];
@@ -132,7 +124,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-8">
             {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
               <div key={item.href}>
-                {item.isUserGreeting ? (
+                {'isUserGreeting' in item && item.isUserGreeting ? (
                   <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
                     {item.label}
                   </span>
@@ -218,7 +210,7 @@ export default function Header() {
             <div className="flex flex-col space-y-4">
               {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
                 <div key={item.href}>
-                  {item.isUserGreeting ? (
+                  {'isUserGreeting' in item && item.isUserGreeting ? (
                     <span className="block px-4 py-2 text-lg font-semibold text-gray-700 dark:text-gray-300">
                       {item.label}
                     </span>

@@ -139,7 +139,7 @@ class OutletLists(Resource):
                name=data['name'],
                contact=data['contact'],
                img_url=data['img_url'],
-               description=['description'],
+               description=data['description'],
                cuisine_id=data['cuisine_id'],
                owner_id=data['owner_id']
            )
@@ -188,7 +188,11 @@ class OutletDetails(Resource):
 # ------------------ MENU ITEMS ------------------ #
 class MenuItemLists(Resource):
     def get(self):
-        items = MenuItem.query.all()
+        outlet_id = request.args.get('outlet_id')
+        if outlet_id:
+            items = MenuItem.query.filter_by(outlet_id=outlet_id).all()
+        else:
+            items = MenuItem.query.all()
         return [item.to_dict(rules=( '-order_items',)) for item in items]
 
     def post(self):
@@ -303,9 +307,9 @@ class OrderItemLists(Resource):
         try:
             order_item = OrderItem(
                 order_id=data['order_id'],
-                menu_item_id=data['menu_item_id'],
+                menuitem_id=data['menuitem_id'],
                 quantity=data.get('quantity', 1),
-                subtotal=data.get('subtotal')
+                sub_total=data.get('sub_total')
             )
             db.session.add(order_item)
             db.session.commit()
@@ -428,7 +432,7 @@ class ReservationLists(Resource):
                 table_id=data['table_id'],
                 booking_date=datetime.strptime(data['booking_date'], "%Y-%m-%d").date(),
                 booking_time=datetime.strptime(data['booking_time'], "%H:%M:%S").time(),
-                status=data.get('status', 'confirmed'),
+                status=data.get('status', 'Confirmed'),
                 no_of_people=data.get('no_of_people', 1)
             )
             table.is_available = 'No' 
@@ -497,12 +501,14 @@ class ReservationDetails(Resource):
             return {"error": "Reservation not found"}, 404
 
         try:
+          
+            reservation.status = 'cancelled'
+            
             table = reservation.table
             table.is_available = 'Yes'
 
-            db.session.delete(reservation)
             db.session.commit()
-            return {"message": "Reservation deleted successfully"}, 200
+            return {"message": "Reservation cancelled successfully"}, 200
 
         except Exception as e:
             db.session.rollback()
