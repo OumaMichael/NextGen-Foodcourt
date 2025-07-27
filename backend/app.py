@@ -139,7 +139,7 @@ class OutletLists(Resource):
                name=data['name'],
                contact=data['contact'],
                img_url=data['img_url'],
-               description=['description'],
+               description=data['description'],
                cuisine_id=data['cuisine_id'],
                owner_id=data['owner_id']
            )
@@ -188,7 +188,11 @@ class OutletDetails(Resource):
 # ------------------ MENU ITEMS ------------------ #
 class MenuItemLists(Resource):
     def get(self):
-        items = MenuItem.query.all()
+        outlet_id = request.args.get('outlet_id')
+        if outlet_id:
+            items = MenuItem.query.filter_by(outlet_id=outlet_id).all()
+        else:
+            items = MenuItem.query.all()
         return [item.to_dict(rules=( '-order_items',)) for item in items]
 
     def post(self):
@@ -294,7 +298,7 @@ class OrderItemLists(Resource):
     def get(self):
         order_items = OrderItem.query.all()
         return [
-            order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items')) 
+            order_item.to_dict(rules=('-order', '-menu_item')) 
             for order_item in order_items
         ]
 
@@ -303,9 +307,9 @@ class OrderItemLists(Resource):
         try:
             order_item = OrderItem(
                 order_id=data['order_id'],
-                menuitem_id=data['menu_item_id'],
+                menuitem_id=data['menuitem_id'],
                 quantity=data.get('quantity', 1),
-                sub_total=data.get('subtotal')
+                sub_total=data.get('sub_total')
             )
             db.session.add(order_item)
             db.session.commit()
@@ -319,7 +323,7 @@ class OrderItemDetails(Resource):
         order_item = OrderItem.query.get(id)
         if not order_item:
             return {"error": "Order item not found."}, 404
-        return order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items'))
+        return order_item.to_dict(rules=('-order', '-menu_item'))
 
     def patch(self, id):
         order_item = OrderItem.query.get(id)
@@ -329,8 +333,8 @@ class OrderItemDetails(Resource):
         data = request.get_json()
         if 'quantity' in data:
             order_item.quantity = data['quantity']
-        if 'sub_total' in data:
-            order_item.sub_total = data['sub_total']
+        if 'subtotal' in data:
+            order_item.subtotal = data['subtotal']
         
         db.session.commit()
         return order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items'))
@@ -428,7 +432,7 @@ class ReservationLists(Resource):
                 table_id=data['table_id'],
                 booking_date=datetime.strptime(data['booking_date'], "%Y-%m-%d").date(),
                 booking_time=datetime.strptime(data['booking_time'], "%H:%M:%S").time(),
-                status=data.get('status', 'confirmed'),
+                status=data.get('status', 'Confirmed'),
                 no_of_people=data.get('no_of_people', 1)
             )
             table.is_available = 'No' 
@@ -497,12 +501,14 @@ class ReservationDetails(Resource):
             return {"error": "Reservation not found"}, 404
 
         try:
+          
+            reservation.status = 'cancelled'
+            
             table = reservation.table
             table.is_available = 'Yes'
 
-            db.session.delete(reservation)
             db.session.commit()
-            return {"message": "Reservation deleted successfully"}, 200
+            return {"message": "Reservation cancelled successfully"}, 200
 
         except Exception as e:
             db.session.rollback()

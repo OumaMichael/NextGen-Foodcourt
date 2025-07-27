@@ -1,8 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-toastify';
 
 interface User {
   id: string;
@@ -11,17 +9,184 @@ interface User {
   role: string;
 }
 
+interface CartItem {
+  dishId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  restaurantName: string;
+  notes?: string;
+}
+
+interface Reservation {
+  id: string;
+  customerName: string;
+  tableNumber: string;
+  date: string;
+  time: string;
+  guestCount: number;
+  status: string;
+}
+
+interface Order {
+  id: string;
+  items: CartItem[];
+  totalAmount: number;
+  status: string;
+  orderTime: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  cart: CartItem[];
+  reservations: Reservation[];
+  orders: Order[];
+  login: (userData: User, token: string) => void;
   logout: () => void;
-  checkAuth: () => Promise<void>;
-  refreshAuth: () => Promise<void>;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (dishId: string) => void;
+  updateCartQuantity: (dishId: string, quantity: number) => void;
+  clearCart: () => void;
+  addReservation: (reservation: Reservation) => void;
+  addOrder: (order: Order) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const userData = localStorage.getItem('user');
+    const cartData = localStorage.getItem('cart');
+    const reservationsData = localStorage.getItem('reservations');
+    const ordersData = localStorage.getItem('orders');
+
+    if (token && userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      setIsLoggedIn(true);
+    }
+
+    if (cartData) {
+      setCart(JSON.parse(cartData));
+    }
+
+    if (reservationsData) {
+      setReservations(JSON.parse(reservationsData));
+    }
+
+    if (ordersData) {
+      setOrders(JSON.parse(ordersData));
+    }
+  }, []);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
+  // Save reservations to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('reservations', JSON.stringify(reservations));
+  }, [reservations]);
+
+  // Save orders to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('orders', JSON.stringify(orders));
+  }, [orders]);
+
+  const login = (userData: User, token: string) => {
+    setUser(userData);
+    setIsLoggedIn(true);
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('userType', userData.role);
+  };
+
+  const logout = () => {
+    setUser(null);
+    setIsLoggedIn(false);
+    setCart([]);
+    setReservations([]);
+    setOrders([]);
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('cart');
+    localStorage.removeItem('reservations');
+    localStorage.removeItem('orders');
+    localStorage.removeItem('userType');
+  };
+
+  const addToCart = (item: CartItem) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(cartItem => cartItem.dishId === item.dishId);
+      if (existingItem) {
+        return prevCart.map(cartItem =>
+          cartItem.dishId === item.dishId
+            ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+            : cartItem
+        );
+      }
+      return [...prevCart, item];
+    });
+  };
+
+  const removeFromCart = (dishId: string) => {
+    setCart(prevCart => prevCart.filter(item => item.dishId !== dishId));
+  };
+
+  const updateCartQuantity = (dishId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(dishId);
+      return;
+    }
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.dishId === dishId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  const addReservation = (reservation: Reservation) => {
+    setReservations(prev => [...prev, reservation]);
+  };
+
+  const addOrder = (order: Order) => {
+    setOrders(prev => [...prev, order]);
+  };
+
+  return (
+    <AuthContext.Provider value={{
+      user,
+      isLoggedIn,
+      cart,
+      reservations,
+      orders,
+      login,
+      logout,
+      addToCart,
+      removeFromCart,
+      updateCartQuantity,
+      clearCart,
+      addReservation,
+      addOrder
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -29,141 +194,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('http://localhost:5555/check-auth', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-        }
-      } else {
-        // Token is invalid, clear it
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const refreshAuth = async () => {
-    await checkAuth();
-  };
-
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('http://localhost:5555/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-        
-        toast.success('Login successful!');
-        
-        return true;
-      } else {
-        toast.error(data.message || 'Login failed. Please try again.');
-        return false;
-      }
-    } catch (error) {
-      toast.error('Server error. Please try again later.');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        await fetch('http://localhost:5555/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Logout API call failed:', error);
-    } finally {
-      // Clear local storage and state regardless of API call success
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('foodCourtCart');
-      setUser(null);
-      setIsLoading(false);
-      
-      toast.success('Logged out successfully!');
-      router.push('/');
-    }
-  };
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // Listen for storage changes (for multi-tab sync)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'access_token' || e.key === 'user') {
-        checkAuth();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-  const value = {
-    user,
-    isLoggedIn: !!user,
-    isLoading,
-    login,
-    logout,
-    checkAuth,
-    refreshAuth
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
 };

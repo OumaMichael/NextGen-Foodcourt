@@ -2,39 +2,56 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { loginUser } from '@/lib/api';
+
+
 
 export default function Login() {
-  const { login, isLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
+  const { login } = useAuth();
   
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { email, password } = formData;
 
     if (!email || !password) {
-      return;
+      return toast.error("Please enter both email and password.");
     }
 
-    const success = await login(email, password);
-    if (success) {
-      // Redirect based on user role or intended page
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (user.role === 'owner') {
-        router.push('/owner-dashboard');
-      } else {
-        router.push(redirectTo);
-      }
+    setIsLoading(true);
+
+    try {
+      const data = await loginUser(email, password);
+      
+      // Use the auth context login method
+      login(data.user, data.access_token);
+      
+      toast.success("Login successful!");
+
+      setTimeout(() => {
+        if (data.user.role === 'owner') {
+          router.push('/owner-dashboard');
+        } else {
+          router.push('/');
+        }
+      }, 1500);
+    } catch (error: any) {
+      toast.error(error.message || "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   return (
     <div className="max-w-md mx-auto">
@@ -43,11 +60,6 @@ export default function Login() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h1>
           <p className="text-gray-600">Sign in to your account to continue</p>
-          {redirectTo !== '/' && (
-            <p className="text-sm text-orange-600 mt-2 bg-orange-50 p-2 rounded">
-              Please log in to access this feature
-            </p>
-          )}
         </div>
 
         
@@ -63,7 +75,6 @@ export default function Login() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               placeholder="Enter your email"
-              disabled={isLoading}
               required
             />
           </div>
@@ -78,7 +89,6 @@ export default function Login() {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               placeholder="Enter your password"
-              disabled={isLoading}
               required
             />
           </div>
@@ -100,17 +110,10 @@ export default function Login() {
 
           <button
             type="submit"
-            className="w-full bg-amber-500 text-white py-2 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             disabled={isLoading}
+            className="w-full bg-amber-500 text-white py-2 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Signing In...
-              </>
-            ) : (
-              'Sign In'
-            )}
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>   
 
@@ -125,6 +128,7 @@ export default function Login() {
 
      
       </div>
+        <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
