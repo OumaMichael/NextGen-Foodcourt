@@ -24,42 +24,15 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkAuthState = () => {
-      const storedUserType = localStorage.getItem('userType');
-      const storedUserName = localStorage.getItem('userName');
-      setUserType(storedUserType);
-      setUserName(storedUserName);
-      setIsLoggedIn(!!storedUserType);
-      setIsOwner(storedUserType === 'admin');
-
-      // Only load cart for customers
-      if (storedUserType === 'customer') {
-        const savedCart = localStorage.getItem('foodCourtCart');
-        if (savedCart) {
-          const cart = JSON.parse(savedCart);
-          const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-          setCartCount(totalItems);
-        }
-      }
-
-      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-      setDarkMode(savedDarkMode);
-      if (savedDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-
-    checkAuthState();
-
-    const handleAuthChange = () => checkAuthState();
-    window.addEventListener('authChange', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('authChange', handleAuthChange);
-    };
-  }, [pathname]);
+    // Initialize dark mode from localStorage
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -84,8 +57,8 @@ export default function Header() {
 
   const ownerNavItems = [
     { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList }
+    { href: '/owner-analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/order-management', label: 'Order Management', icon: ClipboardList }
   ];
 
   const customerNavItems = [
@@ -100,11 +73,29 @@ export default function Header() {
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
-
-  // Only show owner navbar on owner dashboard pages
-  const isOwnerDashboardPage = pathname.startsWith('/owner-dashboard');
-  const shouldShowOwnerNav = isOwner && isOwnerDashboardPage;
-  const shouldShowCustomerNav = !isOwnerDashboardPage;
+  
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
+                <Utensils className="w-8 h-8 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                NextGen FoodCourt
+              </span>
+            </Link>
+            <div className="flex items-center space-x-4">
+              <div className="animate-pulse bg-gray-300 dark:bg-gray-600 h-8 w-20 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
@@ -122,7 +113,7 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
+            {navItems.map((item) => (
               <div key={item.href}>
                 {'isUserGreeting' in item && item.isUserGreeting ? (
                   <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -144,7 +135,7 @@ export default function Header() {
             ))}
 
             {/* Show cart only for customers */}
-            {shouldShowCustomerNav && !isOwner && (
+            {!isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
@@ -177,7 +168,7 @@ export default function Header() {
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-4">
             {/* Show cart only for customers */}
-            {shouldShowCustomerNav && !isOwner && (
+            {!isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
@@ -208,7 +199,7 @@ export default function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4">
             <div className="flex flex-col space-y-4">
-              {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
+              {navItems.map((item) => (
                 <div key={item.href}>
                   {'isUserGreeting' in item && item.isUserGreeting ? (
                     <span className="block px-4 py-2 text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -245,3 +236,4 @@ export default function Header() {
     </nav>
   );
 }
+
