@@ -1,0 +1,76 @@
+[33mcommit 818c8f159bae05df3695ee44f12d687a35db5b1a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/frontend-backend[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/feature/frontend-backend[m[33m, [m[1;31morigin/feature-overwrite-master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m, [m[1;32mLarr-y1-master[m[33m)[m
+Author: Larry <larryotieno51@gmail.com>
+Date:   Sat Jul 26 23:02:45 2025 +0300
+
+    WIP: Save changes before switching to master
+
+[33mcommit 232f7bcb02354ecef44cc93d5a1218969e961943[m
+Author: Larry <larryotieno51@gmail.com>
+Date:   Sat Jul 26 22:51:46 2025 +0300
+
+    Order and reservation page completed
+
+[33mcommit b274a49c9e90aaee6e9126926a5f274ba516023c[m
+Author: Larry <larryotieno51@gmail.com>
+Date:   Fri Jul 25 21:07:31 2025 +0300
+
+    Updated the reservation page
+
+[33mcommit 47ceeecebef485a507e3184e755fb056446fcca4[m
+Author: Jeannette Derek <jeannettederek1@gmail.com>
+Date:   Fri Jul 25 13:19:33 2025 +0300
+
+    fixed ui features
+
+[33mcommit bcc891655b7ee010d76e9f88bda313b4f04c401e[m
+Merge: 6aca0d4 d9a87fe
+Author: Larry <143023365+Larr-y1@users.noreply.github.com>
+Date:   Fri Jul 25 12:35:13 2025 +0300
+
+    Merge pull request #25 from Larr-y1/feature/frontend-backend
+    
+    Linked tables fom backend to frontend and updated resrvation models a…
+
+[33mcommit d9a87fe5ecc93f1a914dcd488d4eb40276a5a60a[m
+Author: Larry <larryotieno51@gmail.com>
+Date:   Fri Jul 25 12:34:09 2025 +0300
+
+    Linked tables fom backend to frontend and updated resrvation models and endpoints
+
+[33mcommit 6aca0d4dae3735c1287163c1eb2eda3ae3be7945[m
+Merge: 6e00609 02bf841
+Author: Jeannette Derek <jeannettederek1@gmail.com>
+Date:   Thu Jul 24 20:13:42 2025 +0300
+
+    Merge branch 'master' of github.com:OumaMichael/NextGen-Foodcourt
+
+[33mcommit 6e006094664b49d84e83f329c909dffd47033beb[m
+Author: Jeannette Derek <jeannettederek1@gmail.com>
+Date:   Thu Jul 24 19:58:43 2025 +0300
+
+    added pages to the owner dashboard
+
+[33mcommit 02bf841cba4eadb7b99f8ddce08710609d6f1a47[m
+Merge: 363ca65 d13a2fb
+Author: Brendah Edward <edwardbrendah28@gmail.com>
+Date:   Thu Jul 24 14:12:43 2025 +0300
+
+    Merge pull request #24 from OumaMichael/browsecuisines/link-backend
+    
+    Linked cuisines to the backend'
+
+[33mcommit d13a2fb57c51b794d051129bca6d71df1ae581c7[m
+Author: Brendah Edward <edwardbrendah28@gmail.com>
+Date:   Thu Jul 24 14:05:37 2025 +0300
+
+    Linked cuisines to the backend'
+    '
+
+[33mcommit 363ca650d39bc9911c68393dcb7506c32efdc896[m
+Merge: b9ef784 b095af7
+Author: Larry <143023365+Larr-y1@users.noreply.github.com>
+Date:   Thu Jul 24 08:25:45 2025 +0300
+
+    Merge pull request #23 from OumaMichael/outlets/fetch-data
+    
+    Outlets/fetch data
