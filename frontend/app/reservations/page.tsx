@@ -48,7 +48,6 @@ export default function Reservations() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [showReservations, setShowReservations] = useState(false);
   const [reservedTables, setReservedTables] = useState<number[]>([]);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     customerName: '',
@@ -83,10 +82,6 @@ export default function Reservations() {
     }
   }, [authLoading, isLoggedIn, user, router]);
 
-  useEffect(() => {
-    const items = getCartItems();
-    setCartItems(items);
-  }, []);
 
   const fetchData = async () => {
     try {
@@ -638,50 +633,11 @@ export default function Reservations() {
                   className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
               </div>
-
-              {cartItems.length > 0 && (
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <input
-                      type="checkbox"
-                      id="includeOrder"
-                      checked={formData.includeOrder}
-                      onChange={(e) => handleInputChange('includeOrder', e.target.checked)}
-                      className="w-5 h-5 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 dark:focus:ring-orange-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <label htmlFor="includeOrder" className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      Include my cart items with this reservation
-                    </label>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className="mb-2">You have {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in your cart:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      {cartItems.slice(0, 3).map((item, index) => (
-                        <li key={index}>
-                          {item.name} x{item.quantity} - ${(item.price * item.quantity).toFixed(2)}
-                        </li>
-                      ))}
-                      {cartItems.length > 3 && (
-                        <li className="text-orange-600 dark:text-orange-400">
-                          ...and {cartItems.length - 3} more item{cartItems.length - 3 !== 1 ? 's' : ''}
-                        </li>
-                      )}
-                    </ul>
-                    <p className="mt-2 font-semibold">
-                      Total: ${cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Your order will be prepared and ready when you arrive for your reservation.
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <button
                 type="submit"
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl text-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                {formData.includeOrder && cartItems.length > 0 ? 'Reserve Table & Place Order' : 'Reserve Table'}
+                Reserve Table
               </button>
             </form>
           </div>
