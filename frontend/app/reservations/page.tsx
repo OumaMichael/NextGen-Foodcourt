@@ -3,18 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import { useAuth } from '@/lib/auth-context';
+import { fetchTables, fetchReservations, createReservation, deleteReservation, getCartItems } from '@/lib/api';
 
 interface Table {
-  id: string;
+  id: number;
   table_number: number;
   capacity: number;
   is_available: string;
 }
 
 interface Reservation {
-  id: string;
-  user_id: string;
-  table_id: string;
+  id: number;
+  user_id: number;
+  table_id: number;
   booking_date: string;
   booking_time: string;
   no_of_people: number;
@@ -22,10 +24,11 @@ interface Reservation {
   created_at: string;
 }
 
-interface User {
-  id: string;
+interface CartItem {
+  id: number;
   name: string;
-  email: string;
+  price: number;
+  quantity: number;
 }
 
 interface FormData {
@@ -34,131 +37,106 @@ interface FormData {
   date: string;
   time: string;
   guestCount: number;
+  includeOrder: boolean;
 }
 
 export default function Reservations() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isLoggedIn, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tables, setTables] = useState<Table[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [showReservations, setShowReservations] = useState(false);
-  const [reservedTables, setReservedTables] = useState<string[]>([]);
+  const [reservedTables, setReservedTables] = useState<number[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     customerName: '',
     selectedTable: '',
     date: '',
     time: '',
-    guestCount: 1
+    guestCount: 1,
+    includeOrder: false
   });
 
-
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        const storedUser = localStorage.getItem('user');
-        
-        if (!token || !storedUser) {
-          router.push('/login');
-          return;
-        }
-
-        const response = await fetch('http://localhost:5555/check-auth', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          router.push('/login');
-          return;
-        }
-
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setFormData(prev => ({ ...prev, customerName: userData.name || userData.email }));
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
+    if (!authLoading && !isLoggedIn) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to make reservations',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
         router.push('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
+      return;
+    }
 
-    checkAuth();
-  }, [router]);
+    if (!authLoading && isLoggedIn && user) {
+      setFormData(prev => ({ 
+        ...prev, 
+        customerName: user.name || user.email 
+      }));
+      
+      fetchData();
+    }
+  }, [authLoading, isLoggedIn, user, router]);
 
   useEffect(() => {
-    if (!user) return;
+    const items = getCartItems();
+    setCartItems(items);
+  }, []);
 
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        
-        // Fetch tables
-        const tablesRes = await fetch('http://localhost:5555/tables');
-        const tablesData = await tablesRes.json();
-        setTables(tablesData);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      const tablesData = await fetchTables();
+      setTables(tablesData);
 
-        // Fetch existing reservations
-        const reservationsRes = await fetch('http://localhost:5555/reservations', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const reservationsData = await reservationsRes.json();
-        
-        // Filter reservations for current user (cancelled ones are deleted from DB, but filter for safety)
-        const userReservations = reservationsData.filter((res: Reservation) => 
-          res.user_id === user.id && res.status !== 'cancelled'
-        );
-        
-        setReservations(userReservations);
-        
-        // Update reserved tables list
-        const reservedTableIds = userReservations.map((res: Reservation) => res.table_id);
-        setReservedTables(reservedTableIds);
-        
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Failed to fetch data'
-        });
-      }
-    };
+      const reservationsData = await fetchReservations();
+      
+      const userReservations = reservationsData.filter((res: Reservation) => 
+        res.user_id === user?.id && res.status !== 'cancelled'
+      );
+      
+      setReservations(userReservations);
+      
+      const reservedTableIds = userReservations.map((res: Reservation) => res.table_id);
+      setReservedTables(reservedTableIds);
+      
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch data'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, [user]);
-
-  if (loading) {
-  return (
-    <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
-    <div className="w-12 h-12 border-4 border-yellow-500 border-solid rounded-full border-t-transparent animate-spin"></div>
-    <p className="text-yellow-600 text-lg">Loading...</p>
-  </div>
-  );
-}
-
+  if (authLoading || loading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
+        <div className="w-12 h-12 border-4 border-yellow-500 border-solid rounded-full border-t-transparent animate-spin"></div>
+        <p className="text-yellow-600 text-lg">Loading...</p>
+      </div>
+    );
+  }
 
   const availableTables = tables.filter(table => 
      table.is_available === 'Yes' && !reservedTables.includes(table.id)
   );
 
-  const handleInputChange = (field: keyof FormData, value: string | number) => {
+  const handleInputChange = (field: keyof FormData, value: string | number | boolean) => {
     let processedValue = value;
     
-    // Handle guestCount specifically to avoid NaN
     if (field === 'guestCount') {
       const numValue = typeof value === 'string' ? parseInt(value) : value;
-      processedValue = isNaN(numValue) ? 1 : numValue;
+      processedValue = isNaN(numValue as number) ? 1 : numValue;
     }
     
     setFormData(prev => ({
@@ -167,9 +145,21 @@ export default function Reservations() {
     }));
   };
 
-
   const handleReservation = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: 'Authentication Required',
+        text: 'Please log in to make a reservation',
+        icon: 'warning',
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#f97316',
+      }).then(() => {
+        router.push('/login');
+      });
+      return;
+    }
     
     if (!formData.selectedTable || !formData.date || !formData.time || !formData.customerName) {
       Swal.fire({
@@ -190,42 +180,26 @@ export default function Reservations() {
       return;
     }
 
-    const selectedTableInfo = tables.find(t => t.id === formData.selectedTable);
+    const selectedTableInfo = tables.find(t => t.id.toString() === formData.selectedTable);
     
-    // Convert time from HH:MM to HH:MM:SS format for backend
     const timeWithSeconds = formData.time.includes(':') && formData.time.split(':').length === 2 
       ? `${formData.time}:00` 
       : formData.time;
     
     const reservationData = {
       user_id: user.id,
-      table_id: formData.selectedTable,
+      table_id: parseInt(formData.selectedTable),
       booking_date: formData.date,
       booking_time: timeWithSeconds,
       no_of_people: formData.guestCount,
-      status: 'confirmed'
+      status: 'confirmed' as const
     };
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:5555/reservations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(reservationData)
-      });
+      const responseData = await createReservation(reservationData);
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create reservation');
-      }
-
-      // Update local state with the new reservation
       setReservations([...reservations, responseData]);
-      setReservedTables([...reservedTables, formData.selectedTable]);
+      setReservedTables([...reservedTables, parseInt(formData.selectedTable)]);
       
       Swal.fire({
         icon: 'success',
@@ -408,7 +382,8 @@ export default function Reservations() {
         selectedTable: '',
         date: '',
         time: '',
-        guestCount: 1
+        guestCount: 1,
+        includeOrder: false
       });
       
     } catch (error) {
@@ -422,7 +397,7 @@ export default function Reservations() {
     }
   };
 
-  const cancelReservation = async (reservationId: string) => {
+  const cancelReservation = async (reservationId: number) => {
     const reservation = reservations.find(res => res.id === reservationId);
     if (!reservation) return;
 
@@ -438,30 +413,20 @@ export default function Reservations() {
 
     if (result.isConfirmed) {
       try {
-        const token = localStorage.getItem('access_token');
-        const response = await fetch(`http://localhost:5555/reservations/${reservationId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        await deleteReservation(reservationId.toString());
 
-        const responseData = await response.json();
-
-        if (!response.ok) {
-          throw new Error(responseData.error || 'Failed to cancel reservation');
-        }
-
-        // Remove the reservation from local state (it's deleted from database)
-        setReservations(reservations.filter(res => res.id !== reservationId));
+        setReservations(reservations.map(res => 
+          res.id === reservationId 
+            ? { ...res, status: 'cancelled' as const }
+            : res
+        ));
         
-        // Remove the table from reserved tables list (it's now available)
         setReservedTables(reservedTables.filter(tableId => tableId !== reservation.table_id));
 
         Swal.fire({
           icon: 'success',
           title: 'Cancelled!',
-          text: 'Your reservation has been cancelled and deleted. The table is now available for other customers.',
+          text: 'Your reservation has been cancelled. The table is now available for other customers.',
           confirmButtonColor: '#f97316'
         });
       } catch (error) {
@@ -476,13 +441,12 @@ export default function Reservations() {
     }
   };
 
-  const getTableNumber = (tableId: string) => {
+  const getTableNumber = (tableId: number) => {
     const table = tables.find(t => t.id === tableId);
     return table?.table_number || 'Unknown';
   };
 
   const formatTime = (timeString: string) => {
-    // Convert HH:MM:SS to HH:MM AM/PM format
     const [hours, minutes] = timeString.split(':');
     const hour24 = parseInt(hours);
     const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
@@ -547,11 +511,11 @@ export default function Reservations() {
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                     table.is_available === 'No' || reservedTables.includes(table.id)
                       ? 'border-red-200 bg-red-50' 
-                      : formData.selectedTable === table.id
+                      : formData.selectedTable === table.id.toString()
                       ? 'border-amber-500 bg-amber-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
-                  onClick={() => table.is_available === 'Yes' && !reservedTables.includes(table.id) && handleInputChange('selectedTable', table.id)}
+                  onClick={() => table.is_available === 'Yes' && !reservedTables.includes(table.id) && handleInputChange('selectedTable', table.id.toString())}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -605,7 +569,7 @@ export default function Reservations() {
                 >
                   <option value="">Choose a table...</option>
                   {availableTables.map((table) => (
-                    <option key={table.id} value={table.id}>
+                    <option key={table.id} value={table.id.toString()}>
                       Table {table.table_number} (Capacity: {table.capacity})
                     </option>
                   ))}
@@ -621,7 +585,7 @@ export default function Reservations() {
                     type="date"
                     value={formData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]} // Minimum date is today
+                    min={new Date().toISOString().split('T')[0]} 
                     className="w-full px-4 py-3 text-lg border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     required
                   />
@@ -675,11 +639,49 @@ export default function Reservations() {
                 />
               </div>
 
+              {cartItems.length > 0 && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <input
+                      type="checkbox"
+                      id="includeOrder"
+                      checked={formData.includeOrder}
+                      onChange={(e) => handleInputChange('includeOrder', e.target.checked)}
+                      className="w-5 h-5 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 dark:focus:ring-orange-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <label htmlFor="includeOrder" className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                      Include my cart items with this reservation
+                    </label>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="mb-2">You have {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in your cart:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {cartItems.slice(0, 3).map((item, index) => (
+                        <li key={index}>
+                          {item.name} x{item.quantity} - ${(item.price * item.quantity).toFixed(2)}
+                        </li>
+                      ))}
+                      {cartItems.length > 3 && (
+                        <li className="text-orange-600 dark:text-orange-400">
+                          ...and {cartItems.length - 3} more item{cartItems.length - 3 !== 1 ? 's' : ''}
+                        </li>
+                      )}
+                    </ul>
+                    <p className="mt-2 font-semibold">
+                      Total: ${cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Your order will be prepared and ready when you arrive for your reservation.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl text-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                Reserve Table
+                {formData.includeOrder && cartItems.length > 0 ? 'Reserve Table & Place Order' : 'Reserve Table'}
               </button>
             </form>
           </div>
