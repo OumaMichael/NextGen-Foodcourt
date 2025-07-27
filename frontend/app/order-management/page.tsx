@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { orders as initialOrders, restaurants } from '@/lib/data';
 import { Clock, CheckCircle, Truck, Package, Trash2 } from 'lucide-react';
 
 interface Order {
@@ -23,11 +22,37 @@ interface Order {
 }
 
 export default function OrderManagement() {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
+  const [orderItems, setOrderItems] = useState<Order[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedRestaurant, setSelectedRestaurant] = useState<string>('all');
 
   const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      
+      const fetchedOrders: Order[] = await fetch('http://localhost:5555/orders').then(res => res.json());
+      setOrders(fetchedOrders);
+    };
+
+    const fetchRestaurants = async () => {
+      
+      const fetchedRestaurants = await fetch('http://localhost:5555/outlets').then(res => res.json());
+      setRestaurants(fetchedRestaurants);
+    };
+
+    const fetchOrderItems = async () => {
+      const fetchedOrderItems = await fetch('http://localhost:5555/order-items').then(res => res.json());
+      setOrderItems(fetchedOrderItems);
+    };
+    
+
+    fetchOrders();
+    fetchRestaurants();
+    fetchOrderItems();
+  }, []);
 
   if (!isOwner) {
     return (
@@ -46,18 +71,32 @@ export default function OrderManagement() {
     );
   }
 
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    setOrders(orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: newStatus }
-        : order
-    ));
+  const updateOrderStatus = async(orderId: string, newStatus: Order['status']) => {
+    
+    const updatedOrder = await fetch(`http://localhost:5555/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    }).then(res => res.json());
+
+    
+    setOrders(orders.map(order => (order.id === orderId ? updatedOrder : order)));
+    setSelectedStatus('all'); 
+    setSelectedRestaurant('all'); 
   };
 
-  const deleteOrder = (orderId: string) => {
-    if (confirm('Are you sure you want to delete this order?')) {
-      setOrders(orders.filter(order => order.id !== orderId));
-    }
+  const deleteOrder = async(orderId: string) => {
+    // Delete order from the backend
+    await fetch(`http://localhost:5555/orders/${orderId}`, {
+      method: 'DELETE',
+    });
+
+    // Update local state
+    setOrders(orders.filter(order => order.id !== orderId));
+    setSelectedStatus('all');
+    setSelectedRestaurant('all');
   };
 
   const filteredOrders = orders.filter(order => {
@@ -200,7 +239,7 @@ export default function OrderManagement() {
                 <div className="mb-6">
                   <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-3">Order Items</h4>
                   <div className="space-y-2">
-                    {order.items.map((item, index) => (
+                    {order?.items?.map((item, index) => (
                       <div key={index} className="flex justify-between items-center py-2 px-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div>
                           <span className="font-medium text-gray-800 dark:text-white">
@@ -222,7 +261,7 @@ export default function OrderManagement() {
                     <div className="flex justify-between items-center">
                       <span className="text-xl font-bold text-gray-800 dark:text-white">Total:</span>
                       <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        KSh {order.totalAmount.toLocaleString()}
+                        KSh {order?.totalAmount?.toLocaleString()?? '0'}
                       </span>
                     </div>
                   </div>
