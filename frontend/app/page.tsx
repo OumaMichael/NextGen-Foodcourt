@@ -92,7 +92,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    🍽️ Order Now
+                    Order Now
                   </>
                 )}
               </button>
@@ -109,7 +109,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    🪑 Reserve Table
+                    Reserve Table
                   </>
                 )}
               </button>
@@ -117,7 +117,7 @@ export default function Home() {
             
             {!isLoggedIn && !isLoading && (
               <p className="mt-4 text-lg text-yellow-200 bg-black/30 rounded-lg px-4 py-2 inline-block">
-                💡 Please log in to place orders and make reservations
+                Please log in to place orders and make reservations
               </p>
             )}
           </div>
@@ -133,7 +133,6 @@ export default function Home() {
             Explore all our restaurant partners and discover what each outlet has to offer
           </p>
         </div>
-
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           {displayRestaurants.map((restaurant: any) => (
             <Link
@@ -161,7 +160,7 @@ export default function Home() {
                 </p>
                 </div>
                 <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex items-center justify-center gap-2">
-                  {isLoggedIn ? '🍽️ Order Now' : '🔒 Login to Order'}
+                  {isLoggedIn ? 'Order Now' : 'Login to Order'}
                 </button>
               </div>
             </Link>
@@ -249,7 +248,7 @@ export default function Home() {
           <p className="text-lg text-gray-600 dark:text-gray-300">Book your spot in advance</p>
           </div>
           <button className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 flex items-center justify-center gap-2">
-            {isLoggedIn ? '🪑 Reserve Now' : '🔒 Login to Reserve'}
+            {isLoggedIn ? 'Reserve Now' : 'Login to Reserve'}
           </button>
         </Link>
 
