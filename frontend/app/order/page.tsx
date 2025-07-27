@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { restaurants } from '@/lib/data';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+import AuthGuard from '@/components/AuthGuard';
 
 interface OrderItem {
   dishId: string;
@@ -12,38 +15,84 @@ interface OrderItem {
   notes: string;
 }
 
+interface MenuItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
+interface Restaurant {
+  id: number;
+  name: string;
+  description: string;
+  menu_items?: MenuItem[];
+}
+
 export default function Order() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const outletId = searchParams.get('outlet'); 
   
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectedOutlet, setSelectedOutlet] = useState(outletId || '');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [submittingOrder, setSubmittingOrder] = useState(false);
   
-  const selectedRestaurant = restaurants.find(r => r.id === selectedOutlet);
-
-  const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('userType');
+  const selectedRestaurant = restaurants.find(r => r.id.toString() === selectedOutlet);
 
 
-  const filteredDishes = selectedRestaurant?.dishes.filter(dish =>
+  // Fetch restaurants and menu items
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [restaurantsRes, menuItemsRes] = await Promise.all([
+          fetch('http://localhost:5555/outlets'),
+          fetch('http://localhost:5555/menu-items')
+        ]);
+
+        const restaurantsData = await restaurantsRes.json();
+        const menuItemsData = await menuItemsRes.json();
+
+        setRestaurants(restaurantsData);
+        setMenuItems(menuItemsData);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        toast.error('Failed to load restaurant data');
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Get menu items for selected restaurant
+  const restaurantMenuItems = selectedRestaurant 
+    ? menuItems.filter(item => item.outlet_id === selectedRestaurant.id)
+    : [];
+
+  const filteredDishes = restaurantMenuItems.filter(dish =>
     dish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     dish.description.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const addToOrder = (dishId: string, name: string, price: number) => {
-    const existingItem = orderItems.find(item => item.dishId === dishId);
+  const addToOrder = (dishId: number, name: string, price: number) => {
+    const dishIdStr = dishId.toString();
+    const existingItem = orderItems.find(item => item.dishId === dishIdStr);
     
     if (existingItem) {
  
       setOrderItems(orderItems.map(item =>
-        item.dishId === dishId 
+        item.dishId === dishIdStr 
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
      
       setOrderItems([...orderItems, {
-        dishId,
+        dishId: dishIdStr,
         name,
         price,
         quantity: 1,
@@ -78,15 +127,78 @@ export default function Order() {
     return orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (orderItems.length === 0) {
-      alert('Please add items to your order first!');
+      toast.error('Please add items to your order first!');
       return;
     }
-    alert(`Order submitted! Total: KSh ${getTotalPrice().toLocaleString()}.`);
+
+    if (!user?.id) {
+      toast.error('User information not found. Please log in again.');
+      return;
+    }
+
+    setSubmittingOrder(true);
+
+    try {
+      const token = localStorage.getItem('access_token');
+      
+      // Create the order
+      const orderResponse = await fetch('http://localhost:5555/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          total_price: getTotalPrice(),
+          status: 'pending'
+        })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to create order');
+      }
+
+      const orderData = await orderResponse.json();
+      const orderId = orderData.id;
+
+      // Create order items
+      for (const item of orderItems) {
+        await fetch('http://localhost:5555/order-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            menu_item_id: parseInt(item.dishId),
+            quantity: item.quantity,
+            subtotal: item.price * item.quantity
+          })
+        });
+      }
+
+      toast.success(`Order submitted successfully! Total: KSh ${getTotalPrice().toLocaleString()}`);
+      
+      // Clear the order
+      setOrderItems([]);
+      
+      // Redirect to a success page or orders page
+
+    } catch (error) {
+      console.error('Failed to submit order:', error);
+      toast.error('Failed to submit order. Please try again.');
+    } finally {
+      setSubmittingOrder(false);
+    }
   };
 
+
   return (
+    <AuthGuard requireAuth={true}>
     <div>
       
       <div className="mb-8">
@@ -113,8 +225,8 @@ export default function Order() {
             >
               <option value="">Choose a restaurant...</option>
               {restaurants.map((restaurant) => (
-                <option key={restaurant.id} value={restaurant.id}>
-                  {restaurant.name} - {restaurant.cuisine}
+                <option key={restaurant.id} value={restaurant.id.toString()}>
+                  {restaurant.name}
                 </option>
               ))}
             </select>
@@ -152,6 +264,7 @@ export default function Order() {
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800">{dish.name}</h4>
                       <p className="text-sm text-gray-600">{dish.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Category: {dish.category}</p>
                       <p className="text-lg font-semibold text-green-600 mt-1">
                         KSh {dish.price.toLocaleString()}
                       </p>
@@ -168,6 +281,12 @@ export default function Order() {
                 {filteredDishes.length === 0 && searchTerm && (
                   <div className="text-center py-8">
                     <p className="text-gray-500 text-lg">No dishes found matching "{searchTerm}"</p>
+                  </div>
+                )}
+
+                {filteredDishes.length === 0 && !searchTerm && selectedRestaurant && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-lg">No menu items available for this restaurant</p>
                   </div>
                 )}
               </div>
@@ -226,9 +345,17 @@ export default function Order() {
                   
                   <button
                     onClick={handleCheckout}
-                    className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl text-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    disabled={submittingOrder}
                   >
-                    Proceed to Checkout
+                    {submittingOrder ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Submitting Order...
+                      </>
+                    ) : (
+                      'Submit Order'
+                    )}
                   </button>
                 </div>
               </div>
@@ -237,5 +364,6 @@ export default function Order() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

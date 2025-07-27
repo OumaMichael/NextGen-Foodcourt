@@ -294,7 +294,7 @@ class OrderItemLists(Resource):
     def get(self):
         order_items = OrderItem.query.all()
         return [
-            order_item.to_dict(rules=('-order', '-menu_item')) 
+            order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items')) 
             for order_item in order_items
         ]
 
@@ -303,9 +303,9 @@ class OrderItemLists(Resource):
         try:
             order_item = OrderItem(
                 order_id=data['order_id'],
-                menu_item_id=data['menu_item_id'],
+                menuitem_id=data['menu_item_id'],
                 quantity=data.get('quantity', 1),
-                subtotal=data.get('subtotal')
+                sub_total=data.get('subtotal')
             )
             db.session.add(order_item)
             db.session.commit()
@@ -319,7 +319,7 @@ class OrderItemDetails(Resource):
         order_item = OrderItem.query.get(id)
         if not order_item:
             return {"error": "Order item not found."}, 404
-        return order_item.to_dict(rules=('-order', '-menu_item'))
+        return order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items'))
 
     def patch(self, id):
         order_item = OrderItem.query.get(id)
@@ -329,8 +329,8 @@ class OrderItemDetails(Resource):
         data = request.get_json()
         if 'quantity' in data:
             order_item.quantity = data['quantity']
-        if 'subtotal' in data:
-            order_item.subtotal = data['subtotal']
+        if 'sub_total' in data:
+            order_item.sub_total = data['sub_total']
         
         db.session.commit()
         return order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items'))

@@ -71,9 +71,14 @@ tomli==2.2.1
 traitlets==5.14.3
 Tree==0.2.4
 typing_extensions==4.13.2
-ujson==5.10.0
+ujson
 urllib3==2.2.3
 virtualenv==20.30.0
 wcwidth==0.2.13
 Werkzeug==3.0.6
 zipp==3.20.2
+flask-bcrypt
+flask-cors
+flask-jwt-extended
+flask-marshmallow
+flask-migrate

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
+import AuthGuard from '@/components/AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Table {
   id: string;
@@ -22,12 +24,6 @@ interface Reservation {
   created_at: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
 interface FormData {
   customerName: string;
   selectedTable: string;
@@ -37,9 +33,7 @@ interface FormData {
 }
 
 export default function Reservations() {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const [tables, setTables] = useState<Table[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [showReservations, setShowReservations] = useState(false);
@@ -53,50 +47,11 @@ export default function Reservations() {
     guestCount: 1
   });
 
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        const storedUser = localStorage.getItem('user');
-        
-        if (!token || !storedUser) {
-          router.push('/login');
-          return;
-        }
-
-        const response = await fetch('http://localhost:5555/check-auth', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          router.push('/login');
-          return;
-        }
-
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setFormData(prev => ({ ...prev, customerName: userData.name || userData.email }));
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        router.push('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
   useEffect(() => {
     if (!user) return;
 
+    // Set customer name from user data
+    setFormData(prev => ({ ...prev, customerName: user.name || user.email }));
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('access_token');
@@ -138,14 +93,6 @@ export default function Reservations() {
     fetchData();
   }, [user]);
 
-  if (loading) {
-  return (
-    <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
-    <div className="w-12 h-12 border-4 border-yellow-500 border-solid rounded-full border-t-transparent animate-spin"></div>
-    <p className="text-yellow-600 text-lg">Loading...</p>
-  </div>
-  );
-}
 
 
   const availableTables = tables.filter(table => 
@@ -186,7 +133,6 @@ export default function Reservations() {
         title: 'Authentication Error',
         text: 'User information not found. Please log in again.'
       });
-      router.push('/login');
       return;
     }
 
@@ -500,6 +446,7 @@ export default function Reservations() {
   };
 
   return (
+    <AuthGuard requireAuth={true}>
     <div>
       
       <div className="mb-8">
@@ -765,5 +712,6 @@ export default function Reservations() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

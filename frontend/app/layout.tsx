@@ -1,8 +1,11 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -11,6 +14,30 @@ export const metadata: Metadata = {
   description: 'Reserve tables and order food in advance at our shared seating food court',
 };
 
+function ClientLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Header />
+      <main className="max-w-7xl mx-auto px-6 py-12 text-gray-900 dark:text-white">
+        {children}
+      </main>
+      <Footer />
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+        toastClassName="text-sm"
+      />
+    </>
+  );
+}
 export default function RootLayout({
   children,
 }: {
@@ -19,11 +46,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300`}>
-        <Header />
-        <main className="max-w-7xl mx-auto px-6 py-12 text-gray-900 dark:text-white">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <ClientLayout>{children}</ClientLayout>
+        </AuthProvider>
       </body>
     </html>
   );

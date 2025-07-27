@@ -1,68 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import {
-  ShoppingCart,
-  Utensils,
-  Moon,
-  Sun,
-  BarChart3,
-  ClipboardList,
-  LogOut,
-  Menu,
-  X
-} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Moon, Sun, Menu, X, User, LogOut, ShoppingCart, Calendar } from 'lucide-react';
 
 export default function Header() {
-  const pathname = usePathname();
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [userType, setUserType] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
+  const { user, isLoggedIn, logout, isLoading } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkAuthState = () => {
-      const storedUserType = localStorage.getItem('userType');
-      const storedUserName = localStorage.getItem('userName');
-      setUserType(storedUserType);
-      setUserName(storedUserName);
-      setIsLoggedIn(!!storedUserType);
-      setIsOwner(storedUserType === 'admin');
-
-      // Only load cart for customers
-      if (storedUserType === 'customer') {
-        const savedCart = localStorage.getItem('foodCourtCart');
-        if (savedCart) {
-          const cart = JSON.parse(savedCart);
-          const totalItems = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
-          setCartCount(totalItems);
-        }
-      }
-
-      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-      setDarkMode(savedDarkMode);
-      if (savedDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-
-    checkAuthState();
-
-    const handleAuthChange = () => checkAuthState();
-    window.addEventListener('authChange', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('authChange', handleAuthChange);
-    };
-  }, [pathname]);
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -75,53 +29,23 @@ export default function Header() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('foodCourtCart');
-    setIsLoggedIn(false);
-    setIsOwner(false);
-    setUserType(null);
-    setUserName(null);
-    setCartCount(0);
+  const handleLogout = async () => {
+    await logout();
     setMobileMenuOpen(false);
-    window.dispatchEvent(new Event('authChange'));
-    window.location.href = '/';
   };
 
-  const ownerNavItems = [
-    { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList }
-  ];
-
-  const customerNavItems = [
-    { href: '/', label: 'Home' },
-    { href: '/order', label: 'Order' },
-    { href: '/reservations', label: 'Reservations' },
-    ...(isLoggedIn
-      ? [
-          { href: '#', label: `Hi, ${userName}`, isUserGreeting: true },
-          { href: '/checkout', label: 'Checkout' }
-        ]
-      : [{ href: '/login', label: 'Login' }])
-  ];
-
-  const navItems = isOwner ? ownerNavItems : customerNavItems;
-
-  // Only show owner navbar on owner dashboard pages
-  const isOwnerDashboardPage = pathname.startsWith('/owner-dashboard');
-  const shouldShowOwnerNav = isOwner && isOwnerDashboardPage;
-  const shouldShowCustomerNav = !isOwnerDashboardPage;
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4">
+    <header className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-50 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
-              <Utensils className="w-8 h-8 text-white" />
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">N</span>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
               NextGen FoodCourt
@@ -129,127 +53,204 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
-              <div key={item.href}>
-                {item.isUserGreeting ? (
-                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                    {item.label}
-                  </span>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className={`text-lg font-semibold transition-all duration-300 hover:text-orange-600 hover:scale-105 ${
-                      pathname === item.href
-                        ? 'text-orange-600 border-b-2 border-orange-600'
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {item.label}
+          <nav className="hidden md:flex items-center space-x-8">
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium">
+              Home
+            </Link>
+            <Link href="/browse-outlets" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium">
+              Restaurants
+            </Link>
+            <Link href="/browse-cuisines" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium">
+              Cuisines
+            </Link>
+            {isLoggedIn && (
+              <>
+                <Link href="/order" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium flex items-center space-x-1">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Order</span>
+                </Link>
+                <Link href="/reservations" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>Reservations</span>
+                </Link>
+                {user?.role === 'owner' && (
+                  <Link href="/owner-dashboard" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium">
+                    Dashboard
                   </Link>
                 )}
+              </>
+            )}
+          </nav>
+
+          {/* Desktop Right Side */}
+          <div className="hidden md:flex items-center space-x-4">
+            {/* User Greeting */}
+            {isLoggedIn && user && (
+              <div className="flex items-center space-x-2 bg-orange-100 dark:bg-orange-900/20 px-3 py-2 rounded-full">
+                <User className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <span className="text-orange-800 dark:text-orange-300 font-medium text-sm">
+                  Hi, {user.name || user.email.split('@')[0]}
+                </span>
               </div>
-            ))}
-
-            {/* Show cart only for customers */}
-            {shouldShowCustomerNav && !isOwner && (
-              <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600">
-                <ShoppingCart className="w-6 h-6" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
             )}
 
-            {/* Logout button for logged in users */}
-            {isLoggedIn && (
-              <button
-                onClick={handleLogout}
-                className="text-lg font-semibold text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1 transition-colors"
-              >
-                <LogOut className="w-5 h-5" /> Logout
-              </button>
-            )}
-
-            {/* Dark mode toggle */}
+            {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className="p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600 transition-colors"
-            >
-              {darkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-            </button>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="md:hidden flex items-center space-x-4">
-            {/* Show cart only for customers */}
-            {shouldShowCustomerNav && !isOwner && (
-              <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300">
-                <ShoppingCart className="w-6 h-6" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-            )}
-
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 text-gray-700 dark:text-gray-300"
+              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              aria-label="Toggle dark mode"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-gray-700 dark:text-gray-300"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Auth Buttons */}
+            {isLoading ? (
+              <div className="w-20 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            ) : isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Link
+                  href="/login"
+                  className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-medium hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-700 py-4">
             <div className="flex flex-col space-y-4">
-              {(shouldShowOwnerNav ? ownerNavItems : shouldShowCustomerNav ? customerNavItems : []).map((item) => (
-                <div key={item.href}>
-                  {item.isUserGreeting ? (
-                    <span className="block px-4 py-2 text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {item.label}
-                    </span>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-2 text-lg font-semibold transition-colors ${
-                        pathname === item.href
-                          ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20'
-                          : 'text-gray-700 dark:text-gray-300 hover:text-orange-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  )}
+              {/* User Greeting Mobile */}
+              {isLoggedIn && user && (
+                <div className="flex items-center space-x-2 bg-orange-100 dark:bg-orange-900/20 px-3 py-2 rounded-lg mx-2">
+                  <User className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  <span className="text-orange-800 dark:text-orange-300 font-medium">
+                    Hi, {user.name || user.email.split('@')[0]}
+                  </span>
                 </div>
-              ))}
+              )}
+
+              {/* Navigation Links */}
+              <Link
+                href="/"
+                onClick={closeMobileMenu}
+                className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+              >
+                Home
+              </Link>
+              <Link
+                href="/browse-outlets"
+                onClick={closeMobileMenu}
+                className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+              >
+                Restaurants
+              </Link>
+              <Link
+                href="/browse-cuisines"
+                onClick={closeMobileMenu}
+                className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+              >
+                Cuisines
+              </Link>
 
               {isLoggedIn && (
+                <>
+                  <Link
+                    href="/order"
+                    onClick={closeMobileMenu}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Order</span>
+                  </Link>
+                  <Link
+                    href="/reservations"
+                    onClick={closeMobileMenu}
+                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Reservations</span>
+                  </Link>
+                  {user?.role === 'owner' && (
+                    <Link
+                      href="/owner-dashboard"
+                      onClick={closeMobileMenu}
+                      className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+                    >
+                      Dashboard
+                    </Link>
+                  )}
+                </>
+              )}
+
+              {/* Dark Mode Toggle Mobile */}
+              <button
+                onClick={toggleDarkMode}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+
+              {/* Auth Buttons Mobile */}
+              {isLoading ? (
+                <div className="mx-4 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              ) : isLoggedIn ? (
                 <button
                   onClick={handleLogout}
-                  className="text-left px-4 py-2 text-lg font-semibold text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center space-x-2 mx-4 bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors"
                 >
-                  <LogOut className="w-5 h-5" /> Logout
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
                 </button>
+              ) : (
+                <div className="flex flex-col space-y-2 mx-4">
+                  <Link
+                    href="/login"
+                    onClick={closeMobileMenu}
+                    className="block text-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors font-medium"
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={closeMobileMenu}
+                    className="block text-center bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-medium hover:from-orange-600 hover:to-red-600 transition-all duration-300"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
               )}
             </div>
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 }
