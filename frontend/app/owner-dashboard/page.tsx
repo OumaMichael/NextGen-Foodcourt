@@ -54,30 +54,49 @@ export default function OwnerDashboard() {
   };
   
   const handleAddOutlet = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:5555/outlets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...newOutlet,
-          owner_id: user?.id,
-          img_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'
-        })
-      });
-      
-      if (response.ok) {
-        fetchData();
-        setShowAddOutlet(false);
-        setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1 });
-      }
-    } catch (error) {
-      console.error('Failed to add outlet:', error);
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('No authentication token found');
     }
-  };
+
+    // Validate required fields
+    if (!newOutlet.name || !newOutlet.contact) {
+      alert('Outlet name and contact are required');
+      return;
+    }
+
+    const response = await fetch('http://localhost:5555/outlets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        name: newOutlet.name,
+        contact: newOutlet.contact,
+        description: newOutlet.description,
+        cuisine_id: newOutlet.cuisine_id,
+        owner_id: user?.id,
+        img_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to add outlet');
+    }
+
+    // Refresh the outlets list
+    await fetchData();
+    setShowAddOutlet(false);
+    setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1 });
+    
+  } catch (error) {
+    console.error('Failed to add outlet:', error);
+    alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
 
   if (!isLoggedIn || user?.role !== 'owner') {
     return (
