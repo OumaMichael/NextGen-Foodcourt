@@ -313,7 +313,7 @@ class OrderItemLists(Resource):
             )
             db.session.add(order_item)
             db.session.commit()
-            return order_item.to_dict(rules=('-order.order_items', '-menu_item.order_items')), 201
+            return order_item.to_dict(rules=('-order', '-menu_item')), 201
         except IntegrityError:
             db.session.rollback()
             return {"message": "Invalid order item data"}, 400
@@ -433,7 +433,8 @@ class ReservationLists(Resource):
                 booking_date=datetime.strptime(data['booking_date'], "%Y-%m-%d").date(),
                 booking_time=datetime.strptime(data['booking_time'], "%H:%M:%S").time(),
                 status=data.get('status', 'Confirmed'),
-                no_of_people=data.get('no_of_people', 1)
+                no_of_people=data.get('no_of_people', 1),
+                order_id=data.get('order_id')
             )
             table.is_available = 'No' 
 

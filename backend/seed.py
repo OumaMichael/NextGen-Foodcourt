@@ -89,7 +89,7 @@ with app.app_context():
     db.session.add_all(items)
 
     tables = [
-        Table(table_number=1, capacity='5', is_available="No"),
+        Table(table_number=1, capacity='5', is_available="Yes"),
         Table(table_number=2, capacity='6', is_available="No"),
         Table(table_number=3, capacity='4', is_available="Yes"),
         Table(table_number=4, capacity='3', is_available="Yes"),
@@ -106,7 +106,7 @@ with app.app_context():
     reservation_datetime1 = now + timedelta(minutes=25)
     reservation_datetime2 = now + timedelta(minutes=25)
 
-    order1 = Order(status="Pending", total_price=950, user=customer1)
+    order1 = Order(status="pending", total_price=950, user=customer1)
     order_item1 = OrderItem(order=order1, menu_item=items[1], quantity=1, sub_total=950)
     reservation1 = Reservation(
         user=customer1,
@@ -115,10 +115,10 @@ with app.app_context():
         booking_date=reservation_datetime1.date(),  
         booking_time=reservation_datetime1.time(),  
         no_of_people=2,
-        status="Confirmed"
+        status="cancelled"
     )
 
-    order2 = Order(status="Confirmed", total_price=1200, user=customer2)
+    order2 = Order(status="confirmed", total_price=1200, user=customer2)
     order_item2 = OrderItem(order=order2, menu_item=items[3], quantity=2, sub_total=1200)
     reservation2 = Reservation(
     user=customer2,
@@ -127,7 +127,7 @@ with app.app_context():
     booking_date=reservation_datetime2.date(), 
     booking_time=reservation_datetime2.time(),  
     no_of_people=3,
-    status="Confirmed"
+    status="confirmed"
     )
 
     db.session.add_all([order1, order_item1, reservation1, order2, order_item2, reservation2])

@@ -9,7 +9,8 @@ import {
   isAuthenticated, 
   getCurrentUser 
 } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 interface OrderItem {
   dishId: string;

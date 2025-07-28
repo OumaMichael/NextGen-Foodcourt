@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchTables, fetchReservations, createReservation, deleteReservation, getCartItems } from '@/lib/api';
+import { fetchTables, fetchReservations, createReservation, deleteReservation } from '@/lib/api';
 
 interface Table {
   id: number;
@@ -24,12 +24,6 @@ interface Reservation {
   created_at: string;
 }
 
-interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-}
 
 interface FormData {
   customerName: string;
@@ -42,7 +36,7 @@ interface FormData {
 
 export default function Reservations() {
   const router = useRouter();
-  const { user, isLoggedIn, loading: authLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tables, setTables] = useState<Table[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -57,9 +51,16 @@ export default function Reservations() {
     guestCount: 1,
     includeOrder: false
   });
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (!authLoading && !isLoggedIn) {
+    const urlOrderId = searchParams.get('orderId');
+    if (urlOrderId) {
+      setOrderId(urlOrderId);
+    }
+
+    if (!isLoggedIn) {
       Swal.fire({
         title: 'Authentication Required',
         text: 'Please log in to make reservations',
@@ -72,7 +73,7 @@ export default function Reservations() {
       return;
     }
 
-    if (!authLoading && isLoggedIn && user) {
+    if (isLoggedIn && user) {
       setFormData(prev => ({ 
         ...prev, 
         customerName: user.name || user.email 
@@ -80,7 +81,7 @@ export default function Reservations() {
       
       fetchData();
     }
-  }, [authLoading, isLoggedIn, user, router]);
+  }, [isLoggedIn, user, router]);
 
 
   const fetchData = async () => {
@@ -92,9 +93,10 @@ export default function Reservations() {
 
       const reservationsData = await fetchReservations();
       
-      const userReservations = reservationsData.filter((res: Reservation) => 
-        res.user_id === user?.id && res.status !== 'cancelled'
-      );
+      const userReservations = reservationsData.filter((res: Reservation) => {
+          if (!user?.id) return false;
+          return res.user_id === Number(user.id) && res.status !== 'cancelled';
+      });
       
       setReservations(userReservations);
       
@@ -113,7 +115,7 @@ export default function Reservations() {
     }
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
         <div className="w-12 h-12 border-4 border-yellow-500 border-solid rounded-full border-t-transparent animate-spin"></div>
@@ -182,12 +184,13 @@ export default function Reservations() {
       : formData.time;
     
     const reservationData = {
-      user_id: user.id,
+      user_id: parseInt(user.id),
       table_id: parseInt(formData.selectedTable),
       booking_date: formData.date,
       booking_time: timeWithSeconds,
       no_of_people: formData.guestCount,
-      status: 'confirmed' as const
+      status: 'confirmed' as const,
+      ...(orderId && { order_id: parseInt(orderId) })
     };
 
     try {
@@ -370,6 +373,8 @@ export default function Reservations() {
         hideClass: {
           popup: 'animate__animated animate__fadeOutDown animate__faster'
         }
+      }).then(() => {
+        router.push('/reservations');
       });
       
       setFormData({
@@ -423,7 +428,9 @@ export default function Reservations() {
           title: 'Cancelled!',
           text: 'Your reservation has been cancelled. The table is now available for other customers.',
           confirmButtonColor: '#f97316'
-        });
+        }).then(() => {
+        router.push('/');
+      });
       } catch (error) {
         console.error('Failed to cancel reservation:', error);
         Swal.fire({
