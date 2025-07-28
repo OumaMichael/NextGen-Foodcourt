@@ -59,9 +59,9 @@ export default function Header() {
 
   const ownerNavItems = [
     { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList },
     { href: '/owner-dashboard/menu', label: 'Menu Management', icon: Settings },
+    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList },
+    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/owner-dashboard/reservations', label: 'Reservations', icon: Settings }
   ];
 
