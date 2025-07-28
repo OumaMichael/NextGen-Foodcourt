@@ -372,19 +372,6 @@ export default function Checkout() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Table Number (if dining in)
-              </label>
-              <input
-                type="text"
-                value={customerInfo.tableNumber}
-                onChange={(e) => setCustomerInfo({ ...customerInfo, tableNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="e.g., Table 5"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Special Instructions
               </label>
               <textarea

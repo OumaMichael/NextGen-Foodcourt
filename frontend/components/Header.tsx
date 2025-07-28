@@ -12,9 +12,10 @@ import {
   ClipboardList,
   LogOut,
   Menu,
-  X
+  X,
+  Settings
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext'; // Adjust the import path as necessary
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
   const pathname = usePathname();
@@ -26,7 +27,6 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Initialize dark mode from localStorage
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
     if (savedDarkMode) {
@@ -59,8 +59,10 @@ export default function Header() {
 
   const ownerNavItems = [
     { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/order-management', label: 'Order Management', icon: ClipboardList }
+    { href: '/owner-dashboard/menu', label: 'Menu Management', icon: Settings },
+    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList },
+    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/owner-dashboard/reservations', label: 'Reservations', icon: Settings }
   ];
 
   const customerNavItems = [
@@ -68,20 +70,17 @@ export default function Header() {
     { href: '/order', label: 'Order' },
     { href: '/reservations', label: 'Reservations' },
     ...(isLoggedIn && user
-      ? [
-          { href: '#', label: `Hello, ${user.name}`, isUserGreeting: true as const }
-        ]
+      ? [{ href: '#', label: `Hello, ${user.name}`, isUserGreeting: true as const }]
       : [{ href: '/login', label: 'Login' }])
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
-  
-  // Show loading state while checking authentication
+
   if (loading) {
     return (
-      <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
+      <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 w-full">
+        <div className="w-full px-6">
+          <div className="max-w-7xl mx-auto flex justify-between items-center h-16">
             <Link href="/" className="flex items-center space-x-3">
               <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
                 <Utensils className="w-8 h-8 text-white" />
@@ -100,21 +99,24 @@ export default function Header() {
   }
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
-              <Utensils className="w-8 h-8 text-white" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              NextGen FoodCourt
-            </span>
-          </Link>
+    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 w-full">
+      <div className="w-full px-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center h-16">
+          
+          {/* Left: Logo */}
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
+                <Utensils className="w-8 h-8 text-white" />
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                NextGen FoodCourt
+              </span>
+            </Link>
+          </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Right: Nav + Cart + Logout + DarkMode */}
+          <div className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
               <div key={item.href}>
                 {'isUserGreeting' in item && item.isUserGreeting ? (
@@ -136,7 +138,6 @@ export default function Header() {
               </div>
             ))}
 
-            {/* Show cart only for customers */}
             {!isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600">
                 <ShoppingCart className="w-6 h-6" />
@@ -148,7 +149,6 @@ export default function Header() {
               </Link>
             )}
 
-            {/* Logout button for logged in users */}
             {isLoggedIn && (
               <button
                 onClick={handleLogout}
@@ -158,7 +158,6 @@ export default function Header() {
               </button>
             )}
 
-            {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
               className="p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600 transition-colors"
@@ -167,9 +166,8 @@ export default function Header() {
             </button>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile menu button */}
           <div className="md:hidden flex items-center space-x-4">
-            {/* Show cart only for customers */}
             {!isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300">
                 <ShoppingCart className="w-6 h-6" />
@@ -180,14 +178,12 @@ export default function Header() {
                 )}
               </Link>
             )}
-
             <button
               onClick={toggleDarkMode}
               className="p-2 text-gray-700 dark:text-gray-300"
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-gray-700 dark:text-gray-300"
@@ -238,4 +234,3 @@ export default function Header() {
     </nav>
   );
 }
-

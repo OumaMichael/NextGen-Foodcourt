@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 export default function Signup() {
 
    const router = useRouter();
+   const { refreshAuth } = useAuth();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -19,6 +20,7 @@ export default function Signup() {
     phone: '',
     userType: 'customer'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit =  async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ export default function Signup() {
 
     
     if (!formData.name || !formData.email || !formData.password) {
-      alert('Please fill in all required fields!');
+      toast.error('Please fill in all required fields!');
       return;
     }
 
@@ -37,14 +39,16 @@ export default function Signup() {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      toast.error('Passwords do not match!');
       return;
     }
 
     if (formData.password.length < 6) {
-      alert('Password must be at least 6 characters long!');
+      toast.error('Password must be at least 6 characters long!');
       return;
     }
+
+    setIsSubmitting(true);
 
      try {
     const res = await fetch('http://localhost:5555/register', {
@@ -63,18 +67,42 @@ export default function Signup() {
 
     if (res.ok) {
       toast.success('Registered successfully!');
+      
+      // Auto-login after successful registration
+      try {
+        const loginRes = await fetch('http://localhost:5555/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const loginData = await loginRes.json();
+        
+        if (loginRes.ok) {
+          localStorage.setItem('access_token', loginData.access_token);
+          localStorage.setItem('user', JSON.stringify(loginData.user));
+          await refreshAuth();
+          
+          toast.success('Welcome! You are now logged in.');
+        }
+      } catch (loginError) {
+        console.error('Auto-login failed:', loginError);
+      }
+      
       setTimeout(() => {
         if (userType === 'owner') {
           router.push('/owner-dashboard');
         } else {
           router.push('/');
         }
-      }, 2000);
+      }, 1500);
     } else {
       toast.error(data.message || 'Registration failed. Try again.');
     }
   } catch (err) {
     toast.error('Server error. Please try again later.');
+  } finally {
+    setIsSubmitting(false);
   }
   };
 
@@ -115,11 +143,12 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, userType: 'customer' })}
+                  disabled={isSubmitting}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
                     formData.userType === 'customer' 
                       ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className="font-medium">Customer</div>
                   <div className="text-sm text-gray-600">Order food & reserve tables</div>
@@ -127,11 +156,12 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, userType: 'owner' })}
+                  disabled={isSubmitting}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
                     formData.userType === 'owner' 
                       ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className="font-medium">Owner</div>
                   <div className="text-sm text-gray-600">Manage your restaurant</div>
@@ -149,6 +179,7 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="John Doe"
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -163,6 +194,7 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Johndoe@example.com"
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -177,6 +209,7 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="+254 700 000 000"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -190,6 +223,7 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Minimum 6 characters"
+                disabled={isSubmitting}
                 required
                 minLength={6}
               />
@@ -205,15 +239,24 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Repeat your password"
+                disabled={isSubmitting}
                 required
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-amber-500 text-white py-3 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors font-medium"
+              className="w-full bg-amber-500 text-white py-3 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              disabled={isSubmitting}
             >
-              Create {formData.userType === 'owner' ? 'Owner' : 'Customer'} Account
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating Account...
+                </>
+              ) : (
+                `Create ${formData.userType === 'owner' ? 'Owner' : 'Customer'} Account`
+              )}
             </button>
           </form>
 
@@ -228,7 +271,6 @@ export default function Signup() {
 
         </div>
       </div>
-          <ToastContainer position="top-right" autoClose={1000} />
     </div>
   );
 }
