@@ -103,8 +103,8 @@ export default function Header() {
       <div className="w-full px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center h-16">
           
-          {/* Left: Logo + Nav */}
-          <div className="flex items-center space-x-6">
+          {/* Left: Logo */}
+          <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
               <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
                 <Utensils className="w-8 h-8 text-white" />
@@ -113,34 +113,31 @@ export default function Header() {
                 NextGen FoodCourt
               </span>
             </Link>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-6">
-              {navItems.map((item) => (
-                <div key={item.href}>
-                  {'isUserGreeting' in item && item.isUserGreeting ? (
-                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {item.label}
-                    </span>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      className={`text-lg font-semibold transition-all duration-300 hover:text-orange-600 hover:scale-105 ${
-                        pathname === item.href
-                          ? 'text-orange-600 border-b-2 border-orange-600'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Right: Cart, Logout, Dark Mode */}
+          {/* Right: Nav + Cart + Logout + DarkMode */}
           <div className="hidden md:flex items-center space-x-6">
+            {navItems.map((item) => (
+              <div key={item.href}>
+                {'isUserGreeting' in item && item.isUserGreeting ? (
+                  <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`text-lg font-semibold transition-all duration-300 hover:text-orange-600 hover:scale-105 ${
+                      pathname === item.href
+                        ? 'text-orange-600 border-b-2 border-orange-600'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </div>
+            ))}
+
             {!isOwner && (
               <Link href="/checkout" className="relative p-2 text-gray-700 dark:text-gray-300 hover:text-orange-600">
                 <ShoppingCart className="w-6 h-6" />
@@ -237,4 +234,3 @@ export default function Header() {
     </nav>
   );
 }
-
