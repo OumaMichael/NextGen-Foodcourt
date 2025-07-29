@@ -17,7 +17,8 @@ export default function OwnerDashboard() {
     name: '',
     contact: '',
     description: '',
-    cuisine_id: 1
+    cuisine_id: 1,
+    img_url: ''
   });
   const [cuisines, setCuisines] = useState([]);
   
@@ -81,7 +82,7 @@ export default function OwnerDashboard() {
         description: newOutlet.description,
         cuisine_id: newOutlet.cuisine_id,
         owner_id: user?.id,
-        img_url: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'
+        img_url: newOutlet.img_url || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400'
       })
     });
     
@@ -93,7 +94,7 @@ export default function OwnerDashboard() {
     // Refresh the outlets list
     await fetchData();
     setShowAddOutlet(false);
-    setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1 });
+    setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1, img_url: '' });
     
   } catch (error) {
     console.error('Failed to add outlet:', error);
@@ -176,6 +177,13 @@ export default function OwnerDashboard() {
               placeholder="Contact Number"
               value={newOutlet.contact}
               onChange={(e) => setNewOutlet({ ...newOutlet, contact: e.target.value })}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="text"
+              placeholder="Image URL"
+              value={newOutlet.img_url}
+              onChange={(e) => setNewOutlet({ ...newOutlet, img_url: e.target.value })}
               className="px-4 py-2 border border-gray-300 rounded-lg"
             />
             <select
