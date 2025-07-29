@@ -121,12 +121,13 @@ export default function OwnerDashboard() {
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           Welcome back, {user?.name}
         </h1>
-        {selectedOutletData ? (
-          <p className="text-gray-600">
-            Managing {selectedOutletData.name} - {selectedOutletData.cuisine?.name} Cuisine
-          </p>
-        ) : (
-          <p className="text-gray-600">No outlets found. Add your first outlet below.</p>
+          {selectedOutletData && 'name' in selectedOutletData ? (
+            <p className="text-gray-600">
+              Managing {(selectedOutletData as any).name} - {(selectedOutletData as any).cuisine?.name} Cuisine
+            </p>
+          ) : (
+            <p className="text-gray-600">No outlets found. Add your first outlet below.</p>
+
         )}
       </div>
 

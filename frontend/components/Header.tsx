@@ -20,7 +20,7 @@ import { getCartCount } from '@/lib/api';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isLoggedIn, loading, logout } = useAuth();
+  const { user, isLoggedIn, logout } = useAuth();
   
   const isOwner = user?.role === 'owner';
   const [cartCount, setCartCount] = useState(0);
@@ -87,33 +87,11 @@ export default function Header() {
     { href: '/order', label: 'Order' },
     { href: '/reservations', label: 'Reservations' },
     ...(isLoggedIn && user
-      ? [{ href: '#', label: `Hello, ${user.name}`, isUserGreeting: true as const }]
+      ? [{ href: '#', label: `Hello, ${user.name}`, isUserGreeting: true }]
       : [{ href: '/login', label: 'Login' }])
   ];
 
   const navItems = isOwner ? ownerNavItems : customerNavItems;
-
-  if (loading) {
-    return (
-      <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 w-full">
-        <div className="w-full px-6">
-          <div className="max-w-7xl mx-auto flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-full">
-                <Utensils className="w-8 h-8 text-white" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                NextGen FoodCourt
-              </span>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <div className="animate-pulse bg-gray-300 dark:bg-gray-600 h-8 w-20 rounded"></div>
-            </div>
-          </div>
-        </div>
-      </nav>
-    );
-  }
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 w-full">

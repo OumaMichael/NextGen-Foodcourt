@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Signup() {
 
    const router = useRouter();
-   const { refreshAuth } = useAuth();
+   const { user, isLoggedIn } = useAuth();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -81,7 +81,7 @@ export default function Signup() {
         if (loginRes.ok) {
           localStorage.setItem('access_token', loginData.access_token);
           localStorage.setItem('user', JSON.stringify(loginData.user));
-          await refreshAuth();
+          // No refreshAuth call here
           
           toast.success('Welcome! You are now logged in.');
         }
@@ -143,12 +143,11 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, userType: 'customer' })}
-                  disabled={isSubmitting}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
                     formData.userType === 'customer' 
                       ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  }`}
                 >
                   <div className="font-medium">Customer</div>
                   <div className="text-sm text-gray-600">Order food & reserve tables</div>
@@ -156,12 +155,11 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, userType: 'owner' })}
-                  disabled={isSubmitting}
                   className={`p-4 border-2 rounded-lg text-center transition-colors ${
                     formData.userType === 'owner' 
                       ? 'border-orange-500 bg-orange-50 text-orange-700' 
                       : 'border-gray-300 hover:border-gray-400'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  }`}
                 >
                   <div className="font-medium">Owner</div>
                   <div className="text-sm text-gray-600">Manage your restaurant</div>
@@ -179,7 +177,6 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="John Doe"
-                disabled={isSubmitting}
                 required
               />
             </div>
@@ -194,7 +191,6 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Johndoe@example.com"
-                disabled={isSubmitting}
                 required
               />
             </div>
@@ -209,7 +205,6 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="+254 700 000 000"
-                disabled={isSubmitting}
               />
             </div>
 
@@ -223,7 +218,6 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Minimum 6 characters"
-                disabled={isSubmitting}
                 required
                 minLength={6}
               />
@@ -239,15 +233,13 @@ export default function Signup() {
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="Repeat your password"
-                disabled={isSubmitting}
                 required
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-amber-500 text-white py-3 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              disabled={isSubmitting}
+              className="w-full bg-amber-500 text-white py-3 px-4 rounded-md hover:bg-amber-600 focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-colors font-medium flex items-center justify-center"
             >
               {isSubmitting ? (
                 <>

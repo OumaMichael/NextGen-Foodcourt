@@ -6,10 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const router = useRouter();
-  const [restaurants, setRestaurants] = useState([]);
-  const [cuisines, setCuisines] = useState([]);
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [cuisines, setCuisines] = useState<any[]>([]);
 
   const getValidImageUrl = (rawUrl: string): string => {
     try {
@@ -82,36 +82,16 @@ export default function Home() {
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={handleOrderNowClick}
-                disabled={isLoading}
-                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
               >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    Order Now
-                  </>
-                )}
+                Order Now
               </button>
               
               <button
                 onClick={handleReserveClick}
-                disabled={isLoading}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
               >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    Reserve Table
-                  </>
-                )}
+                Reserve Table
               </button>
             </div>
             
