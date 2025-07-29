@@ -28,7 +28,7 @@ class Register(Resource):
             user.password_hash = data['password']
             db.session.add(user)
             db.session.commit()
-            return {"message": "User registered successfully"}, 201
+            return user.to_dict(rules=('-orders', '-reservations', '-outlets')), 201
         except IntegrityError:
             db.session.rollback()
             return {"message": "User already exists"}, 400
@@ -249,7 +249,14 @@ class MenuItemDetails(Resource):
 class OrderLists(Resource):
     def get(self):
         orders = Order.query.all()
-        return [order.to_dict(rules=('-reservation', '-order_items','-user',)) for order in orders]
+        return [
+            {
+                **order.to_dict(rules=('-reservation', '-user')),  
+                "user": order.user_summary                         
+            }
+            for order in orders
+        ]
+
 
     def post(self):
         data = request.get_json()
@@ -409,11 +416,16 @@ class TableDetails(Resource):
 
 # ------------------ RESERVATIONS ------------------ #
 class ReservationLists(Resource):
+    
     def get(self):
         reservations = Reservation.query.all()
         return [
-            reservation.to_dict(rules=('-user', '-table', '-order')) 
-            for reservation in reservations
+            {
+                **res.to_dict(rules=('-user', '-table', '-order')),
+                "user": res.user_summary,
+                "table": res.table_summary,
+            }
+            for res in reservations
         ]
 
     def post(self):

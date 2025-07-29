@@ -24,7 +24,6 @@ interface Reservation {
   created_at: string;
 }
 
-
 interface FormData {
   customerName: string;
   selectedTable: string;

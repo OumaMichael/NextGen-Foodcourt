@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
+
 export default function OwnerDashboard() {
   const { user, isLoggedIn } = useAuth();
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function OwnerDashboard() {
   });
   const [cuisines, setCuisines] = useState([]);
   
+  
   useEffect(() => {
     if (!isLoggedIn || user?.role !== 'owner') {
       router.push('/login');
@@ -33,11 +35,12 @@ export default function OwnerDashboard() {
     try {
       const [outletsRes, cuisinesRes] = await Promise.all([
         fetch('http://localhost:5555/outlets'),
-        fetch('http://localhost:5555/cuisines')
+        fetch('http://localhost:5555/cuisines'),
       ]);
       
       const outletsData = await outletsRes.json();
       const cuisinesData = await cuisinesRes.json();
+        
       
       // Filter outlets owned by current user
       const userOutlets = outletsData.filter((outlet: any) => outlet.owner_id === parseInt(user?.id || '0'));
@@ -97,6 +100,7 @@ export default function OwnerDashboard() {
     alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
+
 
   if (!isLoggedIn || user?.role !== 'owner') {
     return (

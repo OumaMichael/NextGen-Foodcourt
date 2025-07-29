@@ -16,12 +16,29 @@ import {
   Settings
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCartCount } from '@/lib/api';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isLoggedIn, cart, loading, logout } = useAuth();
+  const { user, isLoggedIn, loading, logout } = useAuth();
+  
   const isOwner = user?.role === 'owner';
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      setCartCount(getCartCount());
+    };
+
+    updateCartCount();
+    window.addEventListener('cartChange', updateCartCount);
+    window.addEventListener('storage', updateCartCount);
+
+    return () => {
+      window.removeEventListener('cartChange', updateCartCount);
+      window.removeEventListener('storage', updateCartCount);
+    };
+  }, []);
 
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
