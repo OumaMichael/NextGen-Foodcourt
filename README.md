@@ -181,6 +181,6 @@ You can view logs for each service in the Render dashboard:
 2. Click on "Logs" tab
 3. View real-time or historical logs
 
-## Scaling
+## Scalingg
 
 The free tier is sufficient for development and small production workloads. For higher traffic applications, consider upgrading to a paid plan.
