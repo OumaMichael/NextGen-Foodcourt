@@ -13,6 +13,10 @@ from models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Res
 @app.route('/')
 def home():
     return "<h1>Welcome to NextGen Food Court APIs</h1>"
+
+@app.route('/health')
+def health():
+    return {"status": "healthy", "message": "Backend is running"}
      
 # ------------------ AUTH ------------------ #
 class Register(Resource):
