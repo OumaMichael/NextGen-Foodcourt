@@ -3,7 +3,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.sql import func
 
-from config import db, bcrypt
+from backend.config import db, bcrypt
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
@@ -198,5 +198,3 @@ class Reservation(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<Reservation ID: {self.id}, Table: {self.table_id}, Status: {self.status}>"
-    
-
