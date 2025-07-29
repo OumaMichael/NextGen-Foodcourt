@@ -7,7 +7,7 @@ from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identi
 from datetime import datetime, time
 
 
-from config import app, db, api, jwt, jwt_blacklist
+from backend.config import app, db, api, jwt, jwt_blacklist
 from models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Reservation
 
 @app.route('/')
