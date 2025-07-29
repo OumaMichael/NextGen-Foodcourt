@@ -113,6 +113,16 @@ class Order(db.Model, SerializerMixin):
     user = db.relationship('User', back_populates='orders')
     order_items = db.relationship('OrderItem', back_populates='order', cascade='all, delete-orphan')
     reservation = db.relationship('Reservation', back_populates='order', uselist=False)
+    
+    @property
+    def user_summary(self):
+        return {
+            "id": self.user.id,
+            "name": self.user.name,
+            "email": self.user.email,
+            "phone_no": self.user.phone_no,
+            "role": self.user.role
+        }
 
     def __repr__(self):
         return f"<Order ID: {self.id}, Status: {self.status}, Total: {self.total_price}>"
@@ -164,6 +174,27 @@ class Reservation(db.Model, SerializerMixin):
     user = db.relationship('User', back_populates='reservations')
     order = db.relationship('Order', back_populates='reservation')
     table = db.relationship('Table', back_populates='reservations')
+    
+    @property
+    def user_summary(self):
+        if self.user:
+            return {
+                "id": self.user.id,
+                "name": self.user.name,
+                "email": self.user.email
+            }
+        return None
+
+        
+    @property
+    def table_summary(self):
+        return {
+            "id": self.table.id,
+            "table_number": self.table.table_number,
+            "capacity": self.table.capacity,
+            "is_available": self.table.is_available
+        }
+
 
     def __repr__(self):
         return f"<Reservation ID: {self.id}, Table: {self.table_id}, Status: {self.status}>"

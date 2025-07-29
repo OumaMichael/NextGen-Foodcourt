@@ -14,7 +14,7 @@ interface Order {
   };
   order_items: Array<{
     quantity: number;
-    subtotal: number;
+    sub_total: number;
     menu_item: {
       name: string;
       price: number;
@@ -218,7 +218,7 @@ export default function OrderManagement() {
                           </span>
                         </div>
                         <span className="font-semibold text-green-600 dark:text-green-400">
-                          KSh {(item.subtotal || 0).toLocaleString()}
+                          KSh {(item.sub_total || 0).toLocaleString()}
                         </span>
                       </div>
                     )) || (

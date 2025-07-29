@@ -115,11 +115,7 @@ export default function Home() {
               </button>
             </div>
             
-            {!isLoggedIn && !isLoading && (
-              <p className="mt-4 text-lg text-yellow-200 bg-black/30 rounded-lg px-4 py-2 inline-block">
-                Please log in to place orders and make reservations
-              </p>
-            )}
+          
           </div>
         </div>
       </div>

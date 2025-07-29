@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
+
 
 interface Reservation {
   id: number;
@@ -46,7 +48,6 @@ export default function ReservationManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   
   const [newReservation, setNewReservation] = useState({
@@ -60,13 +61,6 @@ export default function ReservationManagement() {
 
   const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
-  // Clear messages after 5 seconds
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(''), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
 
   useEffect(() => {
     const fetchReservationData = async () => {
@@ -160,102 +154,129 @@ export default function ReservationManagement() {
     return timeString;
   };
 
-  const handleAddReservation = async () => {
-    // Clear previous errors and messages
-    setErrors({});
-    setSuccessMessage('');
 
-    // Validate form
-    if (!validateForm()) {
-      return;
+const handleAddReservation = async () => {
+  setErrors({});
+
+  if (!validateForm()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Invalid Input',
+      text: 'Please fill out all required fields correctly.',
+    });
+    return;
+  }
+
+  setSubmitting(true);
+
+  try {
+    // First create a user (simplified for demo)
+    const userResponse = await fetch('http://localhost:5555/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newReservation.customerName.trim(),
+        email: newReservation.customerEmail.trim(),
+        password: 'temppass123',
+        phone_no: '0700000000',
+        role: 'customer'
+      })
+    });
+
+    let userId = 1; 
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      userId = userData.id;
+      console.log(userData);
+    } else {
+      const errorData = await userResponse.json();
+      throw new Error(errorData.message || 'Failed to register user.');
     }
 
-    setSubmitting(true);
+    // Format the date and time properly
+    const formattedDate = formatBookingDate(newReservation.booking_date);
+    const formattedTime = formatBookingTime(newReservation.booking_time);
 
-    try {
-      // First create a user (simplified for demo)
-      const userResponse = await fetch('http://localhost:5555/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newReservation.customerName.trim(),
-          email: newReservation.customerEmail.trim(),
-          password: 'temppass123',
-          phone_no: '0700000000',
-          role: 'customer'
-        })
-      });
-
-      let userId = 1; // Default fallback
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        userId = userData.id;
-      }
-
-      // Format the date and time properly
-      const formattedDate = formatBookingDate(newReservation.booking_date);
-      const formattedTime = formatBookingTime(newReservation.booking_time);
-
-      // Create the reservation with properly formatted data
-      const reservationResponse = await fetch('http://localhost:5555/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    // Create the reservation with properly formatted data
+    const reservationResponse = await fetch('http://localhost:5555/reservations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         user_id: Number(userId),
         table_id: Number(newReservation.table_id),
         booking_date: formattedDate,
         booking_time: formattedTime,
         no_of_people: Number(newReservation.no_of_people) || 1,
-        status: 'Confirmed' // Default status'
-        })
+        status: 'confirmed' // Default status
+      })
+    });
+
+    if (reservationResponse.ok) {
+      const addedReservation = await reservationResponse.json();
+
+      // Reset form
+      setNewReservation({
+        customerName: '',
+        customerEmail: '',
+        table_id: 1,
+        booking_date: '',
+        booking_time: '',
+        no_of_people: 2
       });
 
-      if (reservationResponse.ok) {
-        const addedReservation = await reservationResponse.json();
-        
-        // Reset form
-        setNewReservation({
-          customerName: '',
-          customerEmail: '',
-          table_id: 1,
-          booking_date: '',
-          booking_time: '',
-          no_of_people: 2
-        });
-        
-        setShowAddForm(false);
-        setSuccessMessage('Reservation created successfully!');
-        
-        // Refresh the data to get updated information
-        const [reservationsRes, tablesRes] = await Promise.all([
-          fetch('http://localhost:5555/reservations'),
-          fetch('http://localhost:5555/tables')
-        ]);
-        
-        if (reservationsRes.ok && tablesRes.ok) {
-          const reservationsData = await reservationsRes.json();
-          const tablesData = await tablesRes.json();
-          setReservations(reservationsData);
-          setTables(tablesData);
-        }
-      } else {
-        const errorData = await reservationResponse.json();
-        setErrors({ 
-          general: errorData.error || 'Failed to create reservation. Please try again.' 
-        });
-      }
-    } catch (error) {
-      console.error('Failed to add reservation:', error);
-      setErrors({ 
-        general: 'Network error. Please check your connection and try again.' 
+      setShowAddForm(false);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Reservation created successfully!',
+        timer: 2000,
+        showConfirmButton: false
       });
-    } finally {
-      setSubmitting(false);
+
+      const [reservationsRes, tablesRes] = await Promise.all([
+        fetch('http://localhost:5555/reservations'),
+        fetch('http://localhost:5555/tables')
+      ]);
+
+      if (reservationsRes.ok && tablesRes.ok) {
+        const reservationsData = await reservationsRes.json();
+        const tablesData = await tablesRes.json();
+        setReservations(reservationsData);
+        setTables(tablesData);
+      }
+    } else {
+      const errorData = await reservationResponse.json();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorData.error || 'Failed to create reservation. Please try again.'
+      });
     }
-  };
+  } catch (error) {
+    console.error('Failed to add reservation:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Network Error',
+      text: 'Please check your connection and try again.'
+    });
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const handleDeleteReservation = async (id: number) => {
-    if (confirm('Are you sure you want to delete this reservation?')) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: 'This reservation will be permanently deleted.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
       try {
         const response = await fetch(`http://localhost:5555/reservations/${id}`, {
           method: 'DELETE'
@@ -263,28 +284,34 @@ export default function ReservationManagement() {
 
         if (response.ok) {
           setReservations(reservations.filter(reservation => reservation.id !== id));
-          setSuccessMessage('Reservation deleted successfully!');
-          
-          // Refresh tables to update availability status
+
+          await Swal.fire({
+            title: 'Deleted!',
+            text: 'Reservation has been deleted.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
+
           const tablesRes = await fetch('http://localhost:5555/tables');
           if (tablesRes.ok) {
             const tablesData = await tablesRes.json();
             setTables(tablesData);
           }
         } else {
-          setErrors({ general: 'Failed to delete reservation. Please try again.' });
+          Swal.fire('Error', 'Failed to delete reservation. Please try again.', 'error');
         }
       } catch (error) {
         console.error('Failed to delete reservation:', error);
-        setErrors({ general: 'Network error. Please try again.' });
+        Swal.fire('Network Error', 'Please check your connection and try again.', 'error');
       }
     }
   };
 
+
   const handleCancelForm = () => {
     setShowAddForm(false);
     setErrors({});
-    setSuccessMessage('');
     setNewReservation({
       customerName: '',
       customerEmail: '',
@@ -340,13 +367,6 @@ export default function ReservationManagement() {
           </button>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <span className="text-green-800 dark:text-green-200">{successMessage}</span>
-          </div>
-        )}
 
         {/* General Error Message */}
         {errors.general && (
@@ -543,9 +563,9 @@ export default function ReservationManagement() {
                     )}
                     <div className="mt-3">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        reservation.status === 'Confirmed' 
+                        reservation.status === 'confirmed' 
                           ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-                          : reservation.status === 'Pending'
+                          : reservation.status === 'pending'
                           ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
                           : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
                       }`}>
