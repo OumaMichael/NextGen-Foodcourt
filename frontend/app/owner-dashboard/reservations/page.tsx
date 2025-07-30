@@ -63,8 +63,7 @@ export default function ReservationManagement() {
 
   const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
-
-  useEffect(() => {
+    useEffect(() => {
     const fetchReservationData = async () => {
       try {
         setLoading(true);
@@ -74,12 +73,8 @@ export default function ReservationManagement() {
           fetch('http://localhost:5555/tables')
         ]);
 
-        let reservationsData = await reservationsRes.json();
+        const reservationsData = await reservationsRes.json();
         const tablesData = await tablesRes.json();
-
-        if (selectedOutlet) {
-          reservationsData = reservationsData.filter((reservation: any) => reservation.outlet_id === parseInt(selectedOutlet));
-        }
 
         setReservations(reservationsData);
         setTables(tablesData);
@@ -99,7 +94,8 @@ export default function ReservationManagement() {
     if (isOwner) {
       fetchReservationData();
     }
-  }, [isOwner, selectedOutlet]);
+  }, [isOwner]);
+
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -211,48 +207,52 @@ const handleAddReservation = async () => {
       })
     });
 
-    if (reservationResponse.ok) {
-      const addedReservation = await reservationResponse.json();
+      if (reservationResponse.ok) {
+        const addedReservation = await reservationResponse.json();
 
-      // Reset form
-      setNewReservation({
-        customerName: '',
-        customerEmail: '',
-        table_id: 1,
-        booking_date: '',
-        booking_time: '',
-        no_of_people: 2
-      });
+        // Reset form
+        setNewReservation({
+          customerName: '',
+          customerEmail: '',
+          table_id: 1,
+          booking_date: '',
+          booking_time: '',
+          no_of_people: 2
+        });
 
-      setShowAddForm(false);
+        setShowAddForm(false);
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Reservation created successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Reservation created successfully!',
+          timer: 2000,
+          showConfirmButton: false
+        });
 
-      const [reservationsRes, tablesRes] = await Promise.all([
-        fetch('http://localhost:5555/reservations'),
-        fetch('http://localhost:5555/tables')
-      ]);
+        const [reservationsRes, tablesRes] = await Promise.all([
+          fetch('http://localhost:5555/reservations'),
+          fetch('http://localhost:5555/tables')
+        ]);
 
-      if (reservationsRes.ok && tablesRes.ok) {
-        const reservationsData = await reservationsRes.json();
-        const tablesData = await tablesRes.json();
-        setReservations(reservationsData);
-        setTables(tablesData);
+        if (reservationsRes.ok && tablesRes.ok) {
+          let reservationsData = await reservationsRes.json();
+          const tablesData = await tablesRes.json();
+          if (selectedOutlet) {
+            reservationsData = reservationsData.filter((reservation: any) => reservation.table?.outlet_id === parseInt(selectedOutlet));
+          }
+          setReservations(reservationsData);
+          setTables(tablesData);
+        }
+      } else {
+        const errorData = await reservationResponse.json();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: errorData.error || 'Failed to create reservation. Please try again.'
+        });
       }
-    } else {
-      const errorData = await reservationResponse.json();
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: errorData.error || 'Failed to create reservation. Please try again.'
-      });
-    }
+
   } catch (error) {
     console.error('Failed to add reservation:', error);
     Swal.fire({
@@ -333,6 +333,16 @@ const handleAddReservation = async () => {
     );
   }
 
+  if (!selectedOutlet) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-gray-600 dark:text-gray-300">Please select an outlet to view reservations.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -341,29 +351,28 @@ const handleAddReservation = async () => {
     );
   }
 
-  // Filter available tables (supporting both status formats)
   const availableTables = tables.filter(table => 
     table.status === 'available' || table.is_available === 'Yes'
   );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 sm:mb-4">
               Reservation Management
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
+            <p className="text-lg text-gray-600 dark:text-gray-300">
               Manage table reservations for customers
             </p>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
+            className="bg-orange-500 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2 justify-center"
           >
-            <Plus className="w-5 h-5" />
-            Reserve Table for Customer
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="whitespace-nowrap">Reserve Table</span>
           </button>
         </div>
 
@@ -378,22 +387,22 @@ const handleAddReservation = async () => {
 
         {/* Add New Reservation Form */}
         {showAddForm && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Reserve Table for Customer</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Reserve Table for Customer</h3>
             
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <input
                   type="text"
                   placeholder="Customer Name"
                   value={newReservation.customerName}
                   onChange={(e) => setNewReservation({ ...newReservation, customerName: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.customerName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.customerName && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customerName}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.customerName}</p>
                 )}
               </div>
 
@@ -403,12 +412,12 @@ const handleAddReservation = async () => {
                   placeholder="Customer Email"
                   value={newReservation.customerEmail}
                   onChange={(e) => setNewReservation({ ...newReservation, customerEmail: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.customerEmail ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.customerEmail && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customerEmail}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.customerEmail}</p>
                 )}
               </div>
 
@@ -416,7 +425,7 @@ const handleAddReservation = async () => {
                 <select
                   value={newReservation.table_id}
                   onChange={(e) => setNewReservation({ ...newReservation, table_id: Number(e.target.value) })}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.table_id ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 >
@@ -428,7 +437,7 @@ const handleAddReservation = async () => {
                   ))}
                 </select>
                 {errors.table_id && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.table_id}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.table_id}</p>
                 )}
               </div>
 
@@ -440,12 +449,12 @@ const handleAddReservation = async () => {
                   max="12"
                   value={newReservation.no_of_people}
                   onChange={(e) => setNewReservation({ ...newReservation, no_of_people: Number(e.target.value) })}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.no_of_people ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.no_of_people && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.no_of_people}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.no_of_people}</p>
                 )}
               </div>
 
@@ -455,12 +464,12 @@ const handleAddReservation = async () => {
                   value={newReservation.booking_date}
                   onChange={(e) => setNewReservation({ ...newReservation, booking_date: e.target.value })}
                   min={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.booking_date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
                 {errors.booking_date && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.booking_date}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.booking_date}</p>
                 )}
               </div>
 
@@ -468,7 +477,7 @@ const handleAddReservation = async () => {
                 <select
                   value={newReservation.booking_time}
                   onChange={(e) => setNewReservation({ ...newReservation, booking_time: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm sm:text-base ${
                     errors.booking_time ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 >
@@ -487,21 +496,21 @@ const handleAddReservation = async () => {
                   <option value="22:00">10:00 PM</option>
                 </select>
                 {errors.booking_time && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.booking_time}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">{errors.booking_time}</p>
                 )}
               </div>
             </div>
             
-            <div className="flex gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6">
               <button
                 onClick={handleAddReservation}
                 disabled={submitting}
-                className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    Creating...
+                    <span>Creating...</span>
                   </>
                 ) : (
                   'Create Reservation'
@@ -510,7 +519,7 @@ const handleAddReservation = async () => {
               <button
                 onClick={handleCancelForm}
                 disabled={submitting}
-                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 Cancel
               </button>
@@ -536,7 +545,7 @@ const handleAddReservation = async () => {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                       Reservation #{reservation.id}
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-4 text-gray-600 dark:text-gray-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600 dark:text-gray-300">
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4" />
                         <span>{reservation.user?.name || 'Unknown Customer'}</span>
