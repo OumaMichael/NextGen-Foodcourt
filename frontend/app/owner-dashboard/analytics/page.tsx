@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { TrendingUp, DollarSign, Package, Users, Calendar, Star } from 'lucide-react';
 
 interface AnalyticsData {
@@ -13,6 +14,7 @@ interface AnalyticsData {
 }
 
 export default function OwnerAnalytics() {
+  const { selectedOutlet } = useAuth();
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     totalReservations: 0,
     totalOrdersToday: 0,
@@ -25,30 +27,37 @@ export default function OwnerAnalytics() {
 
   const isOwner = typeof window !== 'undefined' && localStorage.getItem('userType') === 'owner';
 
-  // ✨ HIGHLIGHTED useEffect - Fetches analytics data from backend
   useEffect(() => {
     const fetchAnalyticsData = async () => {
       try {
         setLoading(true);
         
-        // Fetch data from multiple endpoints
         const [reservationsRes, ordersRes, menuItemsRes] = await Promise.all([
           fetch('http://localhost:5555/reservations'),
           fetch('http://localhost:5555/orders'),
           fetch('http://localhost:5555/menu-items')
         ]);
 
-        const reservations = await reservationsRes.json();
-        const orders = await ordersRes.json();
+        let reservations = await reservationsRes.json();
+        let orders = await ordersRes.json();
         const menuItems = await menuItemsRes.json();
 
-        // Calculate analytics
+        if (selectedOutlet) {
+          const outletMenuItems = menuItems.filter((item: any) => item.outlet_id === parseInt(selectedOutlet));
+          const outletMenuItemIds = outletMenuItems.map((item: any) => item.id);
+          
+          orders = orders.filter((order: any) => {
+            return order.order_items?.some((item: any) => outletMenuItemIds.includes(item.menu_item?.id));
+          });
+          
+          reservations = reservations.filter((reservation: any) => reservation.outlet_id === parseInt(selectedOutlet));
+        }
+
         const today = new Date().toISOString().split('T')[0];
         const todayOrders = orders.filter((order: any) => 
           order.created_at && order.created_at.startsWith(today)
         );
 
-        // Find most ordered dish (simplified)
         const dishCounts: { [key: string]: number } = {};
         orders.forEach((order: any) => {
           if (order.order_items) {
@@ -76,13 +85,12 @@ export default function OwnerAnalytics() {
           totalOrdersToday: todayOrders.length,
           mostOrderedDish,
           totalRevenue,
-          averageRating: 4.2, // Mock data - could be calculated from reviews
+          averageRating: 4.2, 
           completionRate: orders.length > 0 ? Math.round((completedOrders / orders.length) * 100) : 0
         });
 
       } catch (error) {
         console.error('Failed to fetch analytics data:', error);
-        // Set mock data on error
         setAnalyticsData({
           totalReservations: 15,
           totalOrdersToday: 8,
@@ -99,7 +107,7 @@ export default function OwnerAnalytics() {
     if (isOwner) {
       fetchAnalyticsData();
     }
-  }, [isOwner]);
+  }, [isOwner, selectedOutlet]);
 
   if (!isOwner) {
     return (
@@ -141,7 +149,6 @@ export default function OwnerAnalytics() {
           </p>
         </div>
 
-        {/* Key Metrics Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -198,7 +205,6 @@ export default function OwnerAnalytics() {
           </div>
         </div>
 
-        {/* Additional Stats */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between">
@@ -252,7 +258,6 @@ export default function OwnerAnalytics() {
           </div>
         </div>
 
-        {/* Summary Section */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Performance Summary</h3>
           <div className="grid md:grid-cols-2 gap-8">

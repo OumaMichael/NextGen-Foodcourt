@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 
 interface MenuItem {
@@ -18,6 +19,7 @@ interface Outlet {
 }
 
 export default function MenuManagement() {
+  const { selectedOutlet } = useAuth();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,8 +46,18 @@ export default function MenuManagement() {
         const menuData = await menuRes.json();
         const outletsData = await outletsRes.json();
 
-        setMenuItems(menuData);
+        // Filter menu items by outlet ID if provided in context
+        const filteredMenuData = selectedOutlet 
+          ? menuData.filter((item: MenuItem) => item.outlet_id === parseInt(selectedOutlet))
+          : menuData;
+
+        setMenuItems(filteredMenuData);
         setOutlets(outletsData);
+        
+        // Set default outlet_id for new items if outlet ID is provided
+        if (selectedOutlet) {
+          setNewItem(prev => ({ ...prev, outlet_id: parseInt(selectedOutlet) }));
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -56,7 +68,7 @@ export default function MenuManagement() {
     if (isOwner) {
       fetchData();
     }
-  }, [isOwner]);
+  }, [isOwner, selectedOutlet]);
 
   const handleAddItem = async () => {
     try {

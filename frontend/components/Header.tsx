@@ -20,7 +20,7 @@ import { getCartCount } from '@/lib/api';
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isLoggedIn, logout } = useAuth();
+  const { user, isLoggedIn, logout, selectedOutlet } = useAuth();
   
   const isOwner = user?.role === 'owner';
   const [cartCount, setCartCount] = useState(0);
@@ -74,12 +74,14 @@ export default function Header() {
     }
   };
 
+  const outletQueryParam = selectedOutlet ? `?outlet=${selectedOutlet}` : '';
+
   const ownerNavItems = [
-    { href: '/owner-dashboard', label: 'Overview', icon: BarChart3 },
-    { href: '/owner-dashboard/menu', label: 'Menu Management', icon: Settings },
-    { href: '/owner-dashboard/order-management', label: 'Order Management', icon: ClipboardList },
-    { href: '/owner-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/owner-dashboard/reservations', label: 'Reservations', icon: Settings }
+    { href: `/owner-dashboard${outletQueryParam}`, label: 'Overview', icon: BarChart3 },
+    { href: `/owner-dashboard/menu${outletQueryParam}`, label: 'Menu Management', icon: Settings },
+    { href: `/owner-dashboard/order-management${outletQueryParam}`, label: 'Order Management', icon: ClipboardList },
+    { href: `/owner-dashboard/analytics${outletQueryParam}`, label: 'Analytics', icon: BarChart3 },
+    { href: `/owner-dashboard/reservations${outletQueryParam}`, label: 'Reservations', icon: Settings }
   ];
 
   const customerNavItems = [
