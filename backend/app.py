@@ -3,6 +3,7 @@
 from flask import request, session
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity,  get_jwt
 from datetime import datetime, time
 
@@ -542,6 +543,7 @@ api.add_resource(TableDetails, '/tables/<int:id>')
 
 api.add_resource(ReservationLists, '/reservations')
 api.add_resource(ReservationDetails, '/reservations/<int:id>')
+
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

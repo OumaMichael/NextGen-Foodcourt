@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 import { Plus } from 'lucide-react';
 
 
@@ -62,6 +63,11 @@ export default function OwnerDashboard() {
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch outlet data. Please try again.'
+      });
     }
   };
 
@@ -90,6 +96,11 @@ export default function OwnerDashboard() {
       setMenuItems(outletMenuItems);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to fetch dashboard data. Please try again.'
+      });
     } finally {
       setLoading(false);
     }
@@ -104,7 +115,11 @@ export default function OwnerDashboard() {
 
     // Validate required fields
     if (!newOutlet.name || !newOutlet.contact) {
-      alert('Outlet name and contact are required');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Outlet name and contact are required'
+      });
       return;
     }
 
@@ -134,9 +149,18 @@ export default function OwnerDashboard() {
     setShowAddOutlet(false);
     setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1, img_url: '' });
     
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: 'Outlet added successfully!'
+    });
   } catch (error) {
     console.error('Failed to add outlet:', error);
-    alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    });
   }
 };
 
@@ -179,149 +203,150 @@ export default function OwnerDashboard() {
   }
   
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          Welcome back, {user?.name}
-        </h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2">
+            Welcome back, {user?.name}
+          </h1>
           {selectedOutletData && 'name' in selectedOutletData ? (
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               Managing {(selectedOutletData as any).name} - {(selectedOutletData as any).cuisine?.name} Cuisine
             </p>
           ) : (
-            <p className="text-gray-600">No outlets found. Add your first outlet below.</p>
-
-        )}
-      </div>
-
-      {/* Outlet Selection */}
-      <div className="mb-8 bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Your Outlets</h2>
-          <button
-            onClick={() => setShowAddOutlet(true)}
-            className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Outlet
-          </button>
+            <p className="text-gray-600 dark:text-gray-300">No outlets found. Add your first outlet below.</p>
+          )}
         </div>
-        
-        {outlets.length > 0 ? (
-          <select
-            value={selectedOutlet}
-            onChange={handleOutletChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          >
-            {outlets.map((outlet: any) => (
-              <option key={outlet.id} value={outlet.id}>
-                {outlet.name} - {outlet.cuisine?.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-gray-500">No outlets registered yet.</p>
-        )}
-      </div>
-      
-      {/* Add Outlet Form */}
-      {showAddOutlet && (
-        <div className="mb-8 bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Outlet</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Outlet Name"
-              value={newOutlet.name}
-              onChange={(e) => setNewOutlet({ ...newOutlet, name: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <input
-              type="text"
-              placeholder="Contact Number"
-              value={newOutlet.contact}
-              onChange={(e) => setNewOutlet({ ...newOutlet, contact: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <input
-              type="text"
-              placeholder="Image URL"
-              value={newOutlet.img_url}
-              onChange={(e) => setNewOutlet({ ...newOutlet, img_url: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <select
-              value={newOutlet.cuisine_id}
-              onChange={(e) => setNewOutlet({ ...newOutlet, cuisine_id: parseInt(e.target.value) })}
-              className="px-4 py-2 border border-gray-300 rounded-lg"
+
+        {/* Outlet Selection */}
+        <div className="mb-6 sm:mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">Your Outlets</h2>
+            <button
+              onClick={() => setShowAddOutlet(true)}
+              className="bg-orange-500 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2 justify-center"
             >
-              {cuisines.map((cuisine: any) => (
-                <option key={cuisine.id} value={cuisine.id}>{cuisine.name}</option>
+              <Plus className="w-4 h-4" />
+              <span className="whitespace-nowrap">Add Outlet</span>
+            </button>
+          </div>
+          
+          {outlets.length > 0 ? (
+            <select
+              value={selectedOutlet}
+              onChange={handleOutletChange}
+              className="w-full px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              {outlets.map((outlet: any) => (
+                <option key={outlet.id} value={outlet.id}>
+                  {outlet.name} - {outlet.cuisine?.name}
+                </option>
               ))}
             </select>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">No outlets registered yet.</p>
+          )}
+        </div>
+        
+        {/* Add Outlet Form */}
+        {showAddOutlet && (
+          <div className="mb-6 sm:mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white mb-3 sm:mb-4">Add New Outlet</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <input
+                type="text"
+                placeholder="Outlet Name"
+                value={newOutlet.name}
+                onChange={(e) => setNewOutlet({ ...newOutlet, name: e.target.value })}
+                className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <input
+                type="text"
+                placeholder="Contact Number"
+                value={newOutlet.contact}
+                onChange={(e) => setNewOutlet({ ...newOutlet, contact: e.target.value })}
+                className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <input
+                type="text"
+                placeholder="Image URL"
+                value={newOutlet.img_url}
+                onChange={(e) => setNewOutlet({ ...newOutlet, img_url: e.target.value })}
+                className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <select
+                value={newOutlet.cuisine_id}
+                onChange={(e) => setNewOutlet({ ...newOutlet, cuisine_id: parseInt(e.target.value) })}
+                className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                {cuisines.map((cuisine: any) => (
+                  <option key={cuisine.id} value={cuisine.id}>{cuisine.name}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              placeholder="Description"
+              value={newOutlet.description}
+              onChange={(e) => setNewOutlet({ ...newOutlet, description: e.target.value })}
+              className="w-full mt-3 sm:mt-4 px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              rows={3}
+            />
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4">
+              <button
+                onClick={handleAddOutlet}
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+              >
+                Add Outlet
+              </button>
+              <button
+                onClick={() => setShowAddOutlet(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-          <textarea
-            placeholder="Description"
-            value={newOutlet.description}
-            onChange={(e) => setNewOutlet({ ...newOutlet, description: e.target.value })}
-            className="w-full mt-4 px-4 py-2 border border-gray-300 rounded-lg"
-            rows={3}
-          />
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={handleAddOutlet}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
-            >
-              Add Outlet
-            </button>
-            <button
-              onClick={() => setShowAddOutlet(false)}
-              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-2">Total Revenue</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
+              KSh {totalRevenue.toLocaleString()}
+            </p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">All time revenue</p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-2">Orders Today</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">{ordersToday}</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Orders placed today
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-2">Menu Items</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">{totalMenuItems}</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">Available dishes</p>
           </div>
         </div>
-      )}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Total Revenue</h3>
-          <p className="text-3xl font-bold text-green-600">
-            KSh {totalRevenue.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">All time revenue</p>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Orders Today</h3>
-          <p className="text-3xl font-bold text-blue-600">{ordersToday}</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Orders placed today
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Menu Items</h3>
-          <p className="text-3xl font-bold text-amber-600">{totalMenuItems}</p>
-          <p className="text-sm text-gray-500 mt-1">Available dishes</p>
-        </div>
-      </div>
-
-      <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
-        <div className="grid md:grid-cols-4 gap-4">
-          <Link href={`/owner-dashboard/menu${outletQueryParam}`} className="bg-orange-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block">
-            Manage Menu
-          </Link>
-          <Link href={`/owner-dashboard/order-management${outletQueryParam}`} className="bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors text-center block">
-            Order Management
-          </Link>
-          <Link href={`/owner-dashboard/analytics${outletQueryParam}`} className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors text-center block">
-            Analytics
-          </Link>
-          <Link href={`/owner-dashboard/reservations${outletQueryParam}`} className="bg-purple-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors text-center block">
-            Manage Reservations
-          </Link>
+        <div className="mt-6 sm:mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Link href={`/owner-dashboard/menu${outletQueryParam}`} className="bg-orange-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block text-sm sm:text-base">
+              Manage Menu
+            </Link>
+            <Link href={`/owner-dashboard/order-management${outletQueryParam}`} className="bg-blue-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors text-center block text-sm sm:text-base">
+              Order Management
+            </Link>
+            <Link href={`/owner-dashboard/analytics${outletQueryParam}`} className="bg-green-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg font-medium hover:bg-green-600 transition-colors text-center block text-sm sm:text-base">
+              Analytics
+            </Link>
+            <Link href={`/owner-dashboard/reservations${outletQueryParam}`} className="bg-purple-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors text-center block text-sm sm:text-base">
+              Manage Reservations
+            </Link>
+          </div>
         </div>
       </div>
     </div>
