@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, Users, Clock, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -43,6 +44,7 @@ interface FormErrors {
 }
 
 export default function ReservationManagement() {
+  const { selectedOutlet } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,14 +74,17 @@ export default function ReservationManagement() {
           fetch('http://localhost:5555/tables')
         ]);
 
-        const reservationsData = await reservationsRes.json();
+        let reservationsData = await reservationsRes.json();
         const tablesData = await tablesRes.json();
+
+        if (selectedOutlet) {
+          reservationsData = reservationsData.filter((reservation: any) => reservation.outlet_id === parseInt(selectedOutlet));
+        }
 
         setReservations(reservationsData);
         setTables(tablesData);
       } catch (error) {
         console.error('Failed to fetch reservation data:', error);
-        // Set mock data on error
         setReservations([]);
         setTables([
           { id: 1, table_number: 1, capacity: 4, status: 'available', is_available: 'Yes' },
@@ -94,9 +99,8 @@ export default function ReservationManagement() {
     if (isOwner) {
       fetchReservationData();
     }
-  }, [isOwner]);
+  }, [isOwner, selectedOutlet]);
 
-  // Form validation
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -139,7 +143,6 @@ export default function ReservationManagement() {
   };
 
   const formatBookingDate = (dateString: string): string => {
-    // Input is already in YYYY-MM-DD format from date input
     return dateString;
   };
 
@@ -170,7 +173,6 @@ const handleAddReservation = async () => {
   setSubmitting(true);
 
   try {
-    // First create a user (simplified for demo)
     const userResponse = await fetch('http://localhost:5555/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -193,11 +195,9 @@ const handleAddReservation = async () => {
       throw new Error(errorData.message || 'Failed to register user.');
     }
 
-    // Format the date and time properly
     const formattedDate = formatBookingDate(newReservation.booking_date);
     const formattedTime = formatBookingTime(newReservation.booking_time);
 
-    // Create the reservation with properly formatted data
     const reservationResponse = await fetch('http://localhost:5555/reservations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

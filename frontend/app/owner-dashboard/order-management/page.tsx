@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Clock, CheckCircle, Truck, Package, Trash2 } from 'lucide-react';
 
 interface Order {
@@ -23,6 +24,7 @@ interface Order {
 }
 
 export default function OrderManagement() {
+  const { selectedOutlet } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -32,9 +34,29 @@ export default function OrderManagement() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
+        // First fetch all orders
         const response = await fetch('http://localhost:5555/orders');
         const data = await response.json();
-        setOrders(data);
+        
+        // Then fetch menu items to get outlet information
+        const menuItemsResponse = await fetch('http://localhost:5555/menu-items');
+        const menuItemsData = await menuItemsResponse.json();
+        
+        // Filter orders by outlet ID if provided in context
+        if (selectedOutlet) {
+          // Find menu items that belong to this outlet
+          const outletMenuItems = menuItemsData.filter((item: any) => item.outlet_id === parseInt(selectedOutlet));
+          const outletMenuItemIds = outletMenuItems.map((item: any) => item.id);
+          
+          // Filter orders to only include those with items from this outlet
+          const filteredOrders = data.filter((order: Order) => {
+            return order.order_items?.some((item: any) => outletMenuItemIds.includes(item.menu_item?.id));
+          });
+          
+          setOrders(filteredOrders);
+        } else {
+          setOrders(data);
+        }
       } catch (error) {
         console.error('Failed to fetch orders:', error);
       } finally {
@@ -45,7 +67,7 @@ export default function OrderManagement() {
     if (isOwner) {
       fetchOrders();
     }
-  }, [isOwner]);
+  }, [isOwner, selectedOutlet]);
 
   const updateOrderStatus = async (orderId: number, newStatus: Order['status']) => {
     try {

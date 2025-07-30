@@ -8,10 +8,12 @@ import { Plus } from 'lucide-react';
 
 
 export default function OwnerDashboard() {
-  const { user, isLoggedIn } = useAuth();
+  const { user, isLoggedIn, selectedOutlet, setSelectedOutlet } = useAuth();
   const router = useRouter();
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAddOutlet, setShowAddOutlet] = useState(false);
   const [newOutlet, setNewOutlet] = useState({
     name: '',
@@ -32,6 +34,12 @@ export default function OwnerDashboard() {
     fetchData();
   }, [isLoggedIn, user, router]);
   
+  useEffect(() => {
+    if (selectedOutlet) {
+      fetchDashboardData();
+    }
+  }, [selectedOutlet]);
+  
   const fetchData = async () => {
     try {
       const [outletsRes, cuisinesRes] = await Promise.all([
@@ -49,11 +57,41 @@ export default function OwnerDashboard() {
       setOutlets(userOutlets);
       setCuisines(cuisinesData);
       
-      if (userOutlets.length > 0) {
+      if (userOutlets.length > 0 && !selectedOutlet) {
         setSelectedOutlet(userOutlets[0].id.toString());
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    if (!selectedOutlet) return;
+    
+    try {
+      setLoading(true);
+      const [ordersRes, menuItemsRes] = await Promise.all([
+        fetch('http://localhost:5555/orders'),
+        fetch('http://localhost:5555/menu-items'),
+      ]);
+      
+      const ordersData = await ordersRes.json();
+      const menuItemsData = await menuItemsRes.json();
+      
+      // Filter orders by selected outlet
+      const outletMenuItems = menuItemsData.filter((item: any) => item.outlet_id === parseInt(selectedOutlet));
+      const outletMenuItemIds = outletMenuItems.map((item: any) => item.id);
+      
+      const filteredOrders = ordersData.filter((order: any) => {
+        return order.order_items?.some((item: any) => outletMenuItemIds.includes(item.menu_item?.id));
+      });
+      
+      setOrders(filteredOrders);
+      setMenuItems(outletMenuItems);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -115,6 +153,31 @@ export default function OwnerDashboard() {
   }
 
   const selectedOutletData = outlets.find((outlet: any) => outlet.id.toString() === selectedOutlet);
+  const outletQueryParam = selectedOutlet ? `?outlet=${selectedOutlet}` : '';
+  
+  // Calculate metrics
+  const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.total_price || 0), 0);
+  
+  const today = new Date().toISOString().split('T')[0];
+  const ordersToday = orders.filter((order: any) => 
+    order.created_at && order.created_at.startsWith(today)
+  ).length;
+  
+  const totalMenuItems = menuItems.length;
+  
+  const handleOutletChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newOutletId = e.target.value;
+    setSelectedOutlet(newOutletId);
+  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+  
   return (
     <div>
       <div className="mb-8">
@@ -147,7 +210,7 @@ export default function OwnerDashboard() {
         {outlets.length > 0 ? (
           <select
             value={selectedOutlet}
-            onChange={(e) => setSelectedOutlet(e.target.value)}
+            onChange={handleOutletChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
             {outlets.map((outlet: any) => (
@@ -224,22 +287,22 @@ export default function OwnerDashboard() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Total Revenue</h3>
           <p className="text-3xl font-bold text-green-600">
-            KSh 0
+            KSh {totalRevenue.toLocaleString()}
           </p>
-          <p className="text-sm text-gray-500 mt-1">This month</p>
+          <p className="text-sm text-gray-500 mt-1">All time revenue</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Orders Today</h3>
-          <p className="text-3xl font-bold text-blue-600">0</p>
+          <p className="text-3xl font-bold text-blue-600">{ordersToday}</p>
           <p className="text-sm text-gray-500 mt-1">
-            Pending orders
+            Orders placed today
           </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Menu Items</h3>
-          <p className="text-3xl font-bold text-amber-600">0</p>
+          <p className="text-3xl font-bold text-amber-600">{totalMenuItems}</p>
           <p className="text-sm text-gray-500 mt-1">Available dishes</p>
         </div>
       </div>
@@ -247,16 +310,16 @@ export default function OwnerDashboard() {
       <div className="mt-8 bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
         <div className="grid md:grid-cols-4 gap-4">
-          <Link href="/owner-dashboard/menu" className="bg-orange-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block">
+          <Link href={`/owner-dashboard/menu${outletQueryParam}`} className="bg-orange-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors text-center block">
             Manage Menu
           </Link>
-          <Link href="/owner-dashboard/order-management" className="bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors text-center block">
+          <Link href={`/owner-dashboard/order-management${outletQueryParam}`} className="bg-blue-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors text-center block">
             Order Management
           </Link>
-          <Link href="/owner-dashboard/analytics" className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors text-center block">
+          <Link href={`/owner-dashboard/analytics${outletQueryParam}`} className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors text-center block">
             Analytics
           </Link>
-          <Link href="/owner-dashboard/reservations" className="bg-purple-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors text-center block">
+          <Link href={`/owner-dashboard/reservations${outletQueryParam}`} className="bg-purple-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-600 transition-colors text-center block">
             Manage Reservations
           </Link>
         </div>

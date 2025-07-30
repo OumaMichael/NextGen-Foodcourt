@@ -61,7 +61,7 @@ export default function Home() {
 
   return (
     <div>
-      <div className="relative h-96 mb-16 rounded-lg overflow-hidden">
+      <div className="relative h-96 md:h-[500px] mb-16 rounded-lg overflow-hidden -mx-4 md:-mx-8 lg:-mx-16 xl:-mx-24">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -70,26 +70,26 @@ export default function Home() {
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-purple-900/60 flex items-center justify-center">
-          <div className="text-center text-white px-4">
-            <h1 className="text-6xl font-bold mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+          <div className="text-center text-white px-4 max-w-6xl mx-auto">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 md:mb-8 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
               Welcome to NextGen FoodCourt
             </h1>
-            <p className="text-2xl max-w-4xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-2xl max-w-4xl mx-auto leading-relaxed">
               Discover amazing cuisines from multiple restaurants all in one place.
               Reserve your table in advance and order from your favorite outlets
               while enjoying our comfortable shared seating experience.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="mt-6 md:mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={handleOrderNowClick}
-                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-3 md:px-12 md:py-4 rounded-xl text-xl md:text-2xl font-bold hover:from-orange-600 hover:to-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
               >
                 Order Now
               </button>
               
               <button
                 onClick={handleReserveClick}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-12 py-4 rounded-xl text-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
+                className="hidden sm:block bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-3 md:px-12 md:py-4 rounded-xl text-xl md:text-2xl font-bold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2"
               >
                 Reserve Table
               </button>

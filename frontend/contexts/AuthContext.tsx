@@ -42,6 +42,8 @@ interface AuthContextType {
   cart: CartItem[];
   reservations: Reservation[];
   orders: Order[];
+  selectedOutlet: string;
+  setSelectedOutlet: (outletId: string) => void;
   login: (userData: User, token: string) => void;
   logout: () => void;
   addToCart: (item: CartItem) => void;
@@ -57,6 +59,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [selectedOutlet, setSelectedOutlet] = useState<string>('');
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -175,6 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cart,
       reservations,
       orders,
+      selectedOutlet,
+      setSelectedOutlet,
       login,
       logout,
       addToCart,
