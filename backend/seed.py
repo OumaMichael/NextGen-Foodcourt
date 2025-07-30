@@ -1,5 +1,5 @@
-from backend.app import app, db
-from backend.models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Reservation
+from app import app, db
+from models import User, Cuisine, Outlet, MenuItem, Table, Order, OrderItem, Reservation
 from datetime import datetime, timedelta
 
 def seed_data():

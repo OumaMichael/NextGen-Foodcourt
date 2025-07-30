@@ -3,7 +3,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.sql import func
 
-from backend.config import db, bcrypt
+from config import db, bcrypt
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'

@@ -46,4 +46,3 @@ jwt_blacklist = set()
 def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
     return jti in jwt_blacklist
-
