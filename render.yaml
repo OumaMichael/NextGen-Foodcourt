@@ -15,7 +15,7 @@ services:
 
   # Frontend Service
   - type: web
-    name: nextgen-foodcourt-frontend
+    name: nextgen-foodcourt
     env: node
     plan: free
     rootDir: frontend
