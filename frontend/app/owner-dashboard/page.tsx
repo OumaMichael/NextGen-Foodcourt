@@ -43,6 +43,7 @@ export default function OwnerDashboard() {
   
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [outletsRes, cuisinesRes] = await Promise.all([
         fetch('http://localhost:5555/outlets'),
         fetch('http://localhost:5555/cuisines'),
@@ -51,8 +52,6 @@ export default function OwnerDashboard() {
       const outletsData = await outletsRes.json();
       const cuisinesData = await cuisinesRes.json();
         
-      
-      // Filter outlets owned by current user
       const userOutlets = outletsData.filter((outlet: any) => outlet.owner_id === parseInt(user?.id || '0'));
       
       setOutlets(userOutlets);
@@ -68,6 +67,8 @@ export default function OwnerDashboard() {
         title: 'Error',
         text: 'Failed to fetch outlet data. Please try again.'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,7 +85,6 @@ export default function OwnerDashboard() {
       const ordersData = await ordersRes.json();
       const menuItemsData = await menuItemsRes.json();
       
-      // Filter orders by selected outlet
       const outletMenuItems = menuItemsData.filter((item: any) => item.outlet_id === parseInt(selectedOutlet));
       const outletMenuItemIds = outletMenuItems.map((item: any) => item.id);
       
@@ -113,7 +113,6 @@ export default function OwnerDashboard() {
       throw new Error('No authentication token found');
     }
 
-    // Validate required fields
     if (!newOutlet.name || !newOutlet.contact) {
       Swal.fire({
         icon: 'warning',
@@ -144,7 +143,6 @@ export default function OwnerDashboard() {
       throw new Error(errorData.message || 'Failed to add outlet');
     }
 
-    // Refresh the outlets list
     await fetchData();
     setShowAddOutlet(false);
     setNewOutlet({ name: '', contact: '', description: '', cuisine_id: 1, img_url: '' });
