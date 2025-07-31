@@ -4,6 +4,7 @@ services:
     name: nextgen-foodcourt-backend
     env: python
     plan: free
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
@@ -11,16 +12,15 @@ services:
         value: sqlite:///app.db
       - key: JWT_SECRET_KEY
         value: supersecret
-    repo: https://github.com/OumaMichael/NextGen-Foodcourt.git
 
   # Frontend Service
   - type: web
     name: nextgen-foodcourt-frontend
     env: node
     plan: free
+    rootDir: frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://nextgen-foodcourt-backend.onrender.com
-    repo: https://github.com/OumaMichael/NextGen-Foodcourt.git
