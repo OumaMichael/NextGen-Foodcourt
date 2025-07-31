@@ -160,6 +160,3 @@ coverage/
 
 # OS
 Thumbs.db
-
-# Render deployment files
-render.yaml
