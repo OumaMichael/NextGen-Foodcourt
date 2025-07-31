@@ -19,8 +19,8 @@ services:
     env: node
     plan: free
     rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: node .next/standalone/server.js
+    buildCommand: npm install && npx next build && npx next export
+    startCommand: npx serve -s out
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://nextgen-foodcourt-backend.onrender.com
