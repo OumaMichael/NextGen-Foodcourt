@@ -14,7 +14,7 @@ RUN npm ci
 COPY . .
 
 # Build the Next.js application with standalone output
-RUN npx next build && npx next export
+RUN npm run build
 
 # Production stage
 FROM node:18-alpine AS runner
@@ -27,7 +27,9 @@ RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
 
 # Copy standalone build output
-COPY --from=builder /app/out ./out
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Change ownership to the non-root user
 RUN chown -R nextjs:nodejs ./
@@ -39,5 +41,5 @@ EXPOSE 3000
 # Set environment variables
 ENV PORT=3000
 
-# Start the application using serve to serve static files
-CMD ["npx", "serve", "-s", "out"]
+# Start the application
+CMD ["node", "server.js"]
