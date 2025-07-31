@@ -29,7 +29,6 @@ RUN adduser -S nextjs -u 1001
 # Copy standalone build output
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
 
 # Change ownership to the non-root user
 RUN chown -R nextjs:nodejs ./
