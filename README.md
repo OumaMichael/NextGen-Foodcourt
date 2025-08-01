@@ -287,14 +287,14 @@ backend/
 For support, email support@nextgenfoodcourt.com
 
 ## 👥 Team Members
-| Name            | Contact / Profile        |
-|--------------------------------------------|
-| Joshua Gichuhi  | @Njugunaa                |
-| Lewis Dickson   | @lewisdicksonn@gmail.com |
-| Brendah Edward  | @b-edward28              |
-| Michael Ouma    | @OumaMichael             |
-| Jeannette Derek | @Gnett                   |
-| Larry           | @Larr-y                  |
+| Name            | Role                  | Contact / Profile        |
+|-----------------|-----------------------|---------------------------|
+| Joshua Gichuhi  | Full Stack Developer  | @Njugunaa                 |
+| Lewis Dickson   | Full Stack Developer     | @lewisdicksonn@gmail.com  |
+| Brendah Edward  | Full Stack Developer    | @b-edward28               |
+| Michael Ouma    | Full Stack Developer  | @OumaMichael              |
+| Jeannette Derek | Full Stack Developer         | @Gnett                    |
+| Larry           | Full Stack Developer        | @Larr-y                   |
 
 ## 📄 License
 This project is licensed under the MIT License 
