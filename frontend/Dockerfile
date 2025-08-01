@@ -40,5 +40,8 @@ EXPOSE 3000
 # Set environment variables
 ENV PORT=3000
 
+# Increase Node.js heap size to improve startup stability
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
 # Start the application
 CMD ["node", "server.js"]
